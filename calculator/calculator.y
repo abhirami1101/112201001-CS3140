@@ -38,14 +38,14 @@ assignment:	var '=' expr '\n' {
 */
 
 expr:	term { $$ = $1; } 
-	| expr '+' term	{ $$ = $1 + $3; }
-	| expr '-' term	{ $$ = $1 - $3; }
+	| expr '+' expr	{ $$ = $1 + $3; }
+	| expr '-' expr	{ $$ = $1 - $3; }
 	| '(' expr ')'	{ $$ = $2; }
 	;
 
 term:	factor {$$ = $1; }
-	| term '*' factor { $$ = $1 * $3; }
-	| term '/' factor { $$ = $1 / $3; }
+	| term '*' expr { $$ = $1 * $3; }
+	| term '/' expr { $$ = $1 / $3; }
 	;
 
 factor:	number { $$ = $1; }

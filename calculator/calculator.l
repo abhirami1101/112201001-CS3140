@@ -17,7 +17,7 @@
 	return yytext[0];
 }
 [\t]+ {}
-
+[()] {return yytext[0];}
 "q" {return 0;}
 
 %%

@@ -2,7 +2,7 @@
 int yylex();
 #include <stdio.h>
 #include <stdlib.h>
-int symbol_table[100] = {0}; /* For the symbol table */
+int symbol_table[26] = {0}; /* For the symbol table */
 void yyerror(const char *s);
 %}
 
@@ -61,7 +61,7 @@ void yyerror(const char *s) {
 
 
 int main() {
-    printf("Enter expressions (e.g., A=20 or B=30+A*20) \n type q and press enter to quit:\n");
+    printf("Enter expressions (e.g., A=20 \n B=30+A*20) \n type q and press enter to quit:\n");
     yyparse();
 	return 0;
 }

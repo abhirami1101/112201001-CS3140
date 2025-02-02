@@ -9,11 +9,11 @@
 
 %% 
 
-[0-9]+ {yylval.num = atoi(yytext);
+[0-9]+(\.[0-9]+)?  {yylval.num = atof(yytext);
 	   return number;}
 [A-Z] { yylval.variable = yytext[0]-'A';
 	     return var; }
-[+\-*&=\n] {
+[+/\-*&=\n] {
 	return yytext[0];
 }
 [\t]+ {}

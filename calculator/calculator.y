@@ -2,12 +2,12 @@
 int yylex();
 #include <stdio.h>
 #include <stdlib.h>
-int symbol_table[26] = {0}; /* For the symbol table */
+double symbol_table[26] = {0}; /* For the symbol table */
 void yyerror(const char *s);
 %}
 
 %union {
-    int num;
+    double num;
     int variable;
 }
 
@@ -16,6 +16,7 @@ void yyerror(const char *s);
 %left	'+' '-'	  /* left associative, same precedence */
 %left	'*' '/'	  /* left assoc., higher precedence */
 %type <num> assignment expr term factor
+%right UMINUS
 
 
 %%
@@ -24,11 +25,11 @@ list: assignment {}
 
 assignment:	var '=' expr '\n' {
 	symbol_table[$1] = $3;
-	printf("%d\n", $3);
+	printf("%f\n", $3);
 	// printf("%d at --- %d\n", symbol_table[$1], $1); // to ensure whether the symbol table is updated corectly
 	}
 
-	| expr '\n' {printf("%d\n", $1);}
+	| expr '\n' {printf("%f\n", $1);}
 	;
 
 /*grammar discussed in class 
@@ -38,19 +39,19 @@ assignment:	var '=' expr '\n' {
 */
 
 expr:	term { $$ = $1; } 
-	| expr '+' expr	{ $$ = $1 + $3; }
-	| expr '-' expr	{ $$ = $1 - $3; }
-	| '(' expr ')'	{ $$ = $2; }
+	| expr '+' term	{ $$ = $1 + $3; }
+	| expr '-' term	{ $$ = $1 - $3; }
 	;
 
 term:	factor {$$ = $1; }
-	| term '*' expr { $$ = $1 * $3; }
-	| term '/' expr { $$ = $1 / $3; }
+	| term '*' factor { $$ = $1 * $3; }
+	| term '/' factor { $$ = $1 / $3; }
 	;
 
 factor:	number { $$ = $1; }
-	| '-'number {$$ = -1 * $2; }
+	| '-'factor %prec UMINUS {$$ = -1 * $2; }
 	| var { $$ = symbol_table[$1]; } // accesses from the symbol table
+	| '(' expr ')'	{ $$ = $2; }
 %%
 
 void yyerror(const char *s) {

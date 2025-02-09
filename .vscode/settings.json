@@ -1,0 +1,6 @@
+{
+	"files.associations": {
+		"Makefile": "makefile",
+		"symbol_table.h": "c"
+	}
+}

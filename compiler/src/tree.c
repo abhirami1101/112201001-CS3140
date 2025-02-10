@@ -20,28 +20,19 @@ Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node*
 
 void printroot(Node* node, int depth) {
     if (node == NULL) return;
-
-    // Print indentation for depth
     for (int i = 0; i < depth; i++) {
         printf("  ");  
     }
-
-    // Print the node's information
     if (node->name) {
         printf("|-- %s", node->name);
     } else {
         printf("|-- (op: %c)", node->op);
     }
-
-    // Print variable or constant value if applicable
     if (node->var_pointer) {
         printf(" [Var: %s, value : %d]", node->var_pointer->varname, node->var_pointer->value.intval);
     }
-
     printf("\n");
-
-    // Recursively print child nodes
     printroot(node->left, depth + 1);
     printroot(node->right, depth + 1);
-    printroot(node->extra, depth );  // Extra node for additional linking (like function args)
+    printroot(node->extra, depth );  
 }

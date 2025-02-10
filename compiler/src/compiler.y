@@ -58,10 +58,11 @@ Prog : Gdecl_sec stmt_list  {
     printroot(root, 0);
 }
     | BEG Gdecl_sec stmt_list END {
-		root = createnode(0, "program", 0, NULL, NULL, NULL, $2);
-    if ($2) {
-        $2->extra = $3;  
-    }
+		
+        Node* temp = $2;
+    while (temp->extra != NULL) temp = temp->extra;
+    temp->extra = $3;  
+    root = createnode(0, "program", 0, NULL, NULL, NULL, $2);
     printroot(root, 0);
 	}
 
@@ -69,16 +70,23 @@ Prog : Gdecl_sec stmt_list  {
 
 Gdecl_sec:	DECL Gdecl_list ENDDECL	{ printf("printing symbol table values\n");
 			 printsymboltable(symbol_table); 
-	/*$$ = createnode(0, "decl", 0, NULL, $2, NULL, NULL);*/
-$$ = $2;}
+	$$ = createnode(0, "decl_list", 0, NULL, $2, NULL, NULL);
+// $$ = $2;
+}
 		;
 
 Gdecl_list:	/* NULL  */ {$$ = NULL;}
 		| Gdecl  Gdecl_list {  
-			// $$ = createnode(0, "list",0,  NULL, $1, NULL, $2);
-			$$ = $1;
-			$1->extra = $2;
-		}
+			// // $$ = createnode(0, "list",0,  NULL, $1, NULL, $2);
+			// $$ = $1;
+            // while($1->extra == NULL)
+			// $1->extra = $2;
+            Node* temp = $1;
+            while (temp->extra != NULL) temp = temp->extra;  // Find last node, where we can append
+            temp->extra = $2;  // other statements would be chained to the end
+            $$ = $1;  
+        }
+		
 		;
 
 

@@ -29,7 +29,7 @@ void printroot(Node* node, int depth) {
         printf("|-- (op: %c)", node->op);
     }
     if (node->var_pointer) {
-        printf(" [Var: %s, value : %d]", node->var_pointer->varname, node->var_pointer->value.intval);
+        printf(" [Var: %s]", node->var_pointer->varname);
     }
     printf("\n");
     printroot(node->left, depth + 1);

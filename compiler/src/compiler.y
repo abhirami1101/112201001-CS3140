@@ -55,6 +55,7 @@ Prog : Gdecl_sec stmt_list  {
     if ($1) {
         $1->extra = $2;  
     }
+    evaluate_statement(root->left, symbol_table);
     printroot(root, 0);
 }
     | BEG Gdecl_sec stmt_list END {
@@ -158,12 +159,19 @@ stmt_list:
     ;
 
 
-statement:	assign_stmt  ';'		{ printf("printing symbol table values\n");
+statement:	assign_stmt  ';'		{ 
+    // printf("printing symbol table values\n");
 			//  printsymboltable(symbol_table); 
-	  printsymboltable(symbol_table); 
-	$$ = $1; }
-		| write_stmt ';' { $$ = $1;}
-        | cond_stmt {$$ = $1;}
+	//   printsymboltable(symbol_table); 
+	$$ = $1; 
+    // evaluate_statement($$);
+    }
+		| write_stmt ';' { $$ = $1;
+        // evaluate_statement($$);
+        }
+        | cond_stmt {$$ = $1;
+        // evaluate_statement($$);
+        }
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
@@ -212,7 +220,9 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
                                                 }
 		|	IF expr THEN stmt_list ELSE stmt_list ENDIF 	{ 
             $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,NULL,NULL), createnode(0,"then", 0, NULL, $4,NULL,NULL), createnode(0,"else", 0, NULL, $6,NULL,NULL));  }
-	        |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { }
+	        |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "initial-condition", 0, NULL, $3,NULL,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL)), createnode(0, "step", 0, NULL, $7, NULL, NULL), createnode(0, "in-loop", 0, NULL, $10, NULL, NULL));
+            }
 		;
 
 expr	:	NUM  { 
@@ -321,8 +331,6 @@ int main(){
 yyparse();
 }
 
-/* here I have not considered  arrays, strings or other function calls 
-only considered the write function call */
 
 
 

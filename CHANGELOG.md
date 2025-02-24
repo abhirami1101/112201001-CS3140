@@ -87,8 +87,10 @@ you can redirect the input file like :
 bin/compiler < 'file_path'
 
 In the assignment 3 :
-  added array types
+  added array (integer type)
   trying to write evaluate functions for the statements
   should integrate the functions with the .y file
+
+  Added if-then and if-then-else
 
 

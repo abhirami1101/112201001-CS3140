@@ -2,10 +2,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 
 
-Symbol* createSymbol(char* name, Type type, int isfunction) {
+Symbol* createSymbol(char* name, Type type, int size, int isfunction) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->varname = strdup(name);
     sym->type = type;
@@ -16,21 +17,26 @@ Symbol* createSymbol(char* name, Type type, int isfunction) {
     } else if (type == TYPE_BOOL) {
         sym->value.boolval = -1;
     }
+    else if (type == TYPE_ARRAY_INT){
+        sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
+        sym->size = size;
+    }
+    
 
     sym->next = NULL;
     return sym;
 }
 
-void insertSymbol(Symbol** root, char* name, Type type, int isfunction) {
+void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction) {
     if (*root == NULL) {
-        *root = createSymbol(name, type, isfunction);
+        *root = createSymbol(name, type, size, isfunction);
         return;
     }
     Symbol* temp = *root;
     while (temp->next != NULL) {
         temp = temp->next;
     }
-    temp->next = createSymbol(name, type, isfunction);
+    temp->next = createSymbol(name, type, size, isfunction);
 }
 
 /*
@@ -55,7 +61,7 @@ here maintaining a linked list for the symbol table
 should think of an optimised way to implement like a hash map
 arrays wouldnt have dynamic allocation */
 
-Symbol* lookupSymbol(Symbol* root, char* name) {
+Symbol* lookupSymbol(Symbol* root,  char* name) {
     while (root) {
         if (strcmp(root->varname, name) == 0) {
             return root;
@@ -65,19 +71,28 @@ Symbol* lookupSymbol(Symbol* root, char* name) {
     return NULL;
 }
 
-void assign(Symbol* var, int value){
+void assign(Symbol* var, int index,  int value){
 
 	if (var->type == TYPE_INT)
 		var->value.intval = value;
 	if (var->type == TYPE_BOOL)
 		var->value.boolval = value;
+    if (var->type == TYPE_ARRAY_INT)
+        var->value.int_arrayval[index] = value;
 
 }
 
 void printsymboltable(Symbol* table){
     if (table != NULL){
-        if (table->is_function == 0)
+        if (table->is_function == 0 && table->size == 0)
             printf("%s = %d\n", table->varname, table->value.intval);
+        else{
+            printf("%s = [", table->varname);
+            for (int i = 0; i < table->size; i++){
+                printf("%d, ",table->value.int_arrayval[i]);
+            }
+            printf("]\n");
+        }
         printsymboltable(table->next);
     }
     else{

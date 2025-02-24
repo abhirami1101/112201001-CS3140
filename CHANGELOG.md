@@ -86,4 +86,9 @@ In the assignment2 :
 you can redirect the input file like : 
 bin/compiler < 'file_path'
 
+In the assignment 3 :
+  added array types
+  trying to write evaluate functions for the statements
+  should integrate the functions with the .y file
+
 

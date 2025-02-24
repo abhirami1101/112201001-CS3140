@@ -1,8 +1,8 @@
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
-
+#include <stdbool.h>
 #define MAXVARS 150
-typedef enum{TYPE_INT, TYPE_BOOL} Type;
+typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT} Type;
 
 
 typedef struct Symbol{
@@ -11,22 +11,25 @@ typedef struct Symbol{
 	int is_function;
 	union{
 		int intval;
-		int boolval;
+		bool boolval;
+		int* int_arrayval;
 	}value; //as of now I have only considered two types integer and boolean
 	 
 	int size;
 	struct Symbol* next;
-	struct Symbol* children; //if we have an array (but is this really needed)
+	struct Symbol* children; //if we have an array (but is this really needed), no this is not needed 
+	 // we can us an additional data type, like int_array and then store a pointer to it.
+	 
 	
 
 } Symbol;
 
 
 
-Symbol* createSymbol(char* name, Type type, int isfunction);
-void insertSymbol(Symbol** root, char* name, Type type, int isfunction);
-Symbol* lookupSymbol(Symbol* root, char* name);
-void assign(Symbol* var, int value);
+Symbol* createSymbol(char* name, Type type, int size, int isfunction);
+void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction);
+Symbol* lookupSymbol(Symbol* root,  char* name);
+void assign(Symbol* var, int index, int value);
 void printsymboltable(Symbol* table);
 
 #endif

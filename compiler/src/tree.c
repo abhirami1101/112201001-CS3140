@@ -36,3 +36,50 @@ void printroot(Node* node, int depth) {
     printroot(node->right, depth + 1);
     printroot(node->extra, depth );  
 }
+
+
+
+void evaluate_statement(Node* root){
+    if (strcmp(root->name, "if-then") == 0|| strcmp(root->name, "if-then-else") == 0 )
+        evaluate_if(root);
+    else if (strcmp(root->name, "write") == 0 )
+        evaluate_write(root);
+    else if (strcmp(root->name, "assign") == 0 )
+        evaluate_assign(root);
+}
+
+void evaluate_if(Node* root){
+    if (root == NULL)
+        return;
+    if (strcmp(root->name,"if-then") == 0){
+        Node* if_node = root->left;
+        Node* then_node = root->right;
+        if (if_node->left->value == 1)
+            evaluate_statement(then_node->left);
+
+    }
+}
+
+void evaluate_write(Node* root){
+    	  Node* para;
+		  para = root->left;
+		  printf("console output : \n");
+		  while (para){
+			printf("%d\n", para->value);
+			para = para->extra;
+		  }
+}
+
+void evaluate_assign(Node* root){
+   if (strcmp(root->name, "assign") == 0){
+    if (root->left->var_pointer){
+        root->left->var_pointer->value.intval = root->right->value;
+    }
+    else{
+       fprintf(stderr, "Error: Assignment to an undefined variable!"); 
+    }
+   }
+   else if (strcmp(root->name, "assign_array") == 0){
+    root->left->left->var_pointer->value.int_arrayval[root->left->right->value] = root->right->value;
+   } 
+}

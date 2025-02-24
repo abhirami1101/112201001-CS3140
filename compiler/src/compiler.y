@@ -36,7 +36,7 @@ this can be used incase of printing all the outputs of print together
 %token WHILE DO ENDWHILE FOR 
 %token T F 
 %token MAIN RETURN
-%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid
+%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt 
 %type <node> stmt_list statement assign_stmt var_expr expr write_stmt para_list para_list1 para
 
 
@@ -92,8 +92,9 @@ Gdecl_list:	/* NULL  */ {$$ = NULL;}
 
 Gdecl	:	type Gid_list ';' {Type t = (strcmp($1->name,"integer") == 0)?TYPE_INT : TYPE_BOOL;
 			Node* p = $2;
-			while(p != NULL){
-				p->var_pointer->type = t;
+			while(p != NULL ){
+                if (strcmp(p->name,"Array")!=0)
+				    p->var_pointer->type = t;
 				p=p->extra;
 			}
 			$$= createnode(0, "decl", 0, NULL, $1, $2, NULL);}
@@ -105,8 +106,10 @@ type	:	T_INT			{ $$ = createnode(0, "integer", 0, NULL, NULL, NULL, NULL);}
 Gid_list:
     Gid { $$ = $1; } 
     | Gid ',' Gid_list { 
-        $$ = $1; 
-        $1->extra = $3; 
+        Node* temp = $1;
+        while (temp->extra != NULL) temp = temp->extra;
+        temp->extra = $3;
+        $$ = $1;
     }
     ;
 
@@ -114,7 +117,7 @@ Gid:
     VAR { 
         Symbol* sym = lookupSymbol(symbol_table, $1);
         if (sym == NULL) {
-            insertSymbol(&symbol_table, $1, TYPE_INT, 0); 
+            insertSymbol(&symbol_table, $1, TYPE_INT, 0, 0); 
             sym = lookupSymbol(symbol_table, $1); 
             if (!sym) { 
                 yyerror("Error: Failed to insert symbol!"); 
@@ -122,6 +125,19 @@ Gid:
             }
         }
         $$ = createnode(0, $1, sym->value.intval, sym, NULL, NULL, NULL);
+    }
+    | VAR '[' NUM ']' {  
+        // printf("hii"); 
+        Symbol* sym = lookupSymbol(symbol_table, $1);
+        if (sym == NULL) {
+            insertSymbol(&symbol_table, $1, TYPE_ARRAY_INT, $3, 0); 
+            sym = lookupSymbol(symbol_table, $1); 
+            if (!sym) { 
+                yyerror("Error: Failed to insert symbol!"); 
+                exit(1);
+            }
+        }
+        $$ = createnode(0, "Array", 0, NULL, createnode(0, "size", $3, NULL, NULL,NULL,NULL), createnode(0, $1, 0, sym, NULL, NULL,NULL),NULL);
     }
 ;
 
@@ -137,7 +153,7 @@ stmt_list:
             temp->extra = $2;  // other statements would be chained to the end
             $$ = $1;  
         }
-    }
+    } 
     | error { yyerror("Syntax error in statement."); }
     ;
 
@@ -147,6 +163,7 @@ statement:	assign_stmt  ';'		{ printf("printing symbol table values\n");
 	  printsymboltable(symbol_table); 
 	$$ = $1; }
 		| write_stmt ';' { $$ = $1;}
+        | cond_stmt {$$ = $1;}
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
@@ -156,7 +173,12 @@ assign_stmt: var_expr '=' expr {
     } else {
         yyerror("Error: Assignment to an undefined variable!");
     }
-};
+}
+        | array_expr '=' expr{
+            $$ = createnode('=', "assign_array", 0, NULL, $1, $3, NULL); 
+       $1->left->var_pointer->value.int_arrayval[$1->right->value] = $3->value;  
+    } 
+
 
 write_stmt : WRITE '(' para_list ')' { 
     $$ = createnode(0, "write", 0, NULL,$3, NULL, NULL);
@@ -164,13 +186,14 @@ write_stmt : WRITE '(' para_list ')' {
 
 para_list : /* null */ { $$ = NULL; }
           | para_list1 { $$ = $1; 
-		  Node* para;
-		  para = $$;
-		  printf("console output : \n");
-		  while (para){
-			printf("%d\n", para->value);
-			para = para->extra;
-		  }}
+		//   Node* para;
+		//   para = $$;
+		//   printf("console output : \n");
+		//   while (para){
+		// 	// printf("%d\n", para->value);
+		// 	para = para->extra;
+		//   }
+        }
           ;
 
 para_list1 : para { $$ = $1; } 
@@ -184,6 +207,13 @@ para : expr {
     $$ = createnode(0, "parameter", $1->value, NULL, $1, NULL, NULL); 
 };
 
+cond_stmt:	IF expr THEN stmt_list ENDIF 	{ 
+    $$ = createnode(0,"if-then", 0, NULL,  createnode(0,"if", 0, NULL, $2,NULL,NULL), createnode(0,"then", 0, NULL, $4,NULL,NULL), NULL); 
+                                                }
+		|	IF expr THEN stmt_list ELSE stmt_list ENDIF 	{ 
+            $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,NULL,NULL), createnode(0,"then", 0, NULL, $4,NULL,NULL), createnode(0,"else", 0, NULL, $6,NULL,NULL));  }
+	        |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { }
+		;
 
 expr	:	NUM  { 
             $$ = createnode(0, "number", $1, NULL, NULL, NULL, NULL); 
@@ -249,22 +279,34 @@ expr	:	NUM  {
 		|	expr EQUALEQUAL expr { 
             $$ = createnode('E', "eq", $1->value == $3->value, NULL, $1, $3, NULL);
         }
+        | var_expr '[' expr ']' {
+            Symbol* sym = lookupSymbol(symbol_table, $1->name);
+            if (sym->type != TYPE_ARRAY_INT){
+                yyerror("Not array so indexing is not possible");
+                $$ = NULL;
+            }
+            else{
+                $$ = createnode(0, "Array_exp", sym->value.int_arrayval[$3->value], NULL, $1, $3, NULL);
+            }
+        }
+        |	LOGICAL_NOT expr	{ $$ = createnode('!', "not", !$2->value, NULL, $2,NULL,NULL );						}
+		|	expr LOGICAL_AND expr	{ $$ = createnode('&', "and", $1->value && $3->value, NULL, $1, $3,NULL );						}
+		|	expr LOGICAL_OR expr	{ 	$$ = createnode('|', "or", $1->value || $3->value, NULL, $1, $3,NULL );					}
 ;
 
 	
 var_expr: VAR { 
     Symbol* sym = lookupSymbol(symbol_table, $1);
     if (!sym) { 
-        yyerror("Error: Undefined variable used in expression! Initializing to 0.");
-        insertSymbol(&symbol_table, $1, TYPE_INT, 0); 
-        sym = lookupSymbol(symbol_table, $1);  
-        if (!sym) { 
-            yyerror("Critical Error: Symbol insertion failed!"); 
-            exit(1); 
-        }
+        yyerror("Error: Undefined variable used in expression");
     }
     $$ = createnode(0, $1, sym->value.intval, sym, NULL, NULL, NULL);
 };
+
+array_expr : VAR '[' expr ']'{
+    Symbol* sym = lookupSymbol(symbol_table, $1);
+    $$ = createnode(0, "Array_exp", sym->value.int_arrayval[$3->value], NULL, createnode(0, $1, 0, sym, NULL, NULL,NULL), $3, NULL);
+}
 
 
 

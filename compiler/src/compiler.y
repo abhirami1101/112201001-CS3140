@@ -16,6 +16,7 @@ typedef struct console_output{
 
 this can be used incase of printing all the outputs of print together
 */
+// extern int error_flag;
 %}
 
 %union{
@@ -55,6 +56,7 @@ Prog : Gdecl_sec stmt_list  {
     if ($1) {
         $1->extra = $2;  
     }
+    //  printf("error flag === %d\n", error_flag);
     evaluate_statement(root->left, symbol_table);
     printroot(root, 0);
 }
@@ -160,6 +162,9 @@ stmt_list:
 
 
 statement:	assign_stmt  ';'		{ 
+    // if (error_flag == 1){
+    //     return 0;
+    // }
     // printf("printing symbol table values\n");
 			//  printsymboltable(symbol_table); 
 	//   printsymboltable(symbol_table); 
@@ -175,16 +180,17 @@ statement:	assign_stmt  ';'		{
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
+
     
-    if ($1->var_pointer) {  
-        $1->var_pointer->value.intval = $3->value;  
-    } else {
-        yyerror("Error: Assignment to an undefined variable!");
-    }
+    // if ($1->var_pointer) {  
+    //     $1->var_pointer->value.intval = $3->value;  
+    // } else {
+    //     yyerror("Error: Assignment to an undefined variable!");
+    // }
 }
         | array_expr '=' expr{
             $$ = createnode('=', "assign_array", 0, NULL, $1, $3, NULL); 
-       $1->left->var_pointer->value.int_arrayval[$1->right->value] = $3->value;  
+    //    $1->left->var_pointer->value.int_arrayval[$1->right->value] = $3->value;  
     } 
 
 
@@ -216,12 +222,13 @@ para : expr {
 };
 
 cond_stmt:	IF expr THEN stmt_list ENDIF 	{ 
-    $$ = createnode(0,"if-then", 0, NULL,  createnode(0,"if", 0, NULL, $2,NULL,NULL), createnode(0,"then", 0, NULL, $4,NULL,NULL), NULL); 
+    $$ = createnode(0,"if-then", 0, NULL,  createnode(0,"if", 0, NULL, $2,createnode(0,"then", 0, NULL, $4,NULL,NULL),NULL), NULL, NULL); 
                                                 }
 		|	IF expr THEN stmt_list ELSE stmt_list ENDIF 	{ 
-            $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,NULL,NULL), createnode(0,"then", 0, NULL, $4,NULL,NULL), createnode(0,"else", 0, NULL, $6,NULL,NULL));  }
-	        |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
-                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "initial-condition", 0, NULL, $3,NULL,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL)), createnode(0, "step", 0, NULL, $7, NULL, NULL), createnode(0, "in-loop", 0, NULL, $10, NULL, NULL));
+            $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,createnode(0,"then", 0, NULL, $4,NULL,NULL),createnode(0,"else", 0, NULL, $6,NULL,NULL)), NULL, NULL);  
+            }
+	    |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL),createnode(0, "step", 0, NULL, $7, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $10, NULL, NULL), NULL);
             }
 		;
 
@@ -309,12 +316,21 @@ var_expr: VAR {
     Symbol* sym = lookupSymbol(symbol_table, $1);
     if (!sym) { 
         yyerror("Error: Undefined variable used in expression");
+        return 0;
     }
     $$ = createnode(0, $1, sym->value.intval, sym, NULL, NULL, NULL);
 };
 
 array_expr : VAR '[' expr ']'{
     Symbol* sym = lookupSymbol(symbol_table, $1);
+    if (!sym){
+        yyerror("Error: Undefined variable used in expression");
+        return 0; 
+    }
+    if (evaluate_expr($3, symbol_table) >= sym->size){
+       yyerror("Error: index out of range"); 
+       return 0; 
+    }
     $$ = createnode(0, "Array_exp", sym->value.int_arrayval[$3->value], NULL, createnode(0, $1, 0, sym, NULL, NULL,NULL), $3, NULL);
 }
 

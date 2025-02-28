@@ -3,6 +3,8 @@
 
 #include "symbol_table.h"
 
+// int error_flag = 0;
+
 typedef struct Node{
 	char op;
 	char* name;

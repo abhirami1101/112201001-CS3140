@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int error_flag;
+
+
 Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
 	Node* new = (Node*) malloc(sizeof(Node));
 	new->op = op;
@@ -48,16 +51,19 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
     else if (strcmp(root->name, "write") == 0) {
         evaluate_write(root,symbol_table);
     } 
-    else if (strcmp(root->name, "assign") == 0) {
+    else if (strcmp(root->name, "assign") == 0 || strcmp(root->name, "assign_array") == 0 ) {
         evaluate_assign(root,symbol_table);
     }
     else if (strcmp(root->name, "for-loop") == 0){
         evaluate_for(root,symbol_table);
     }
-
+    // printf("\n ------------------------------ \n");
+    printsymboltable(symbol_table);
+    printf("\n ------------------------------ \n");
     // Always evaluate extra statements in sequence
     if (root->extra != NULL) {
         evaluate_statement(root->extra,symbol_table);
+        
     }
 }
 
@@ -67,20 +73,22 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
         return;
     if (strcmp(root->name,"if-then") == 0){
         Node* if_node = root->left;
-        Node* then_node = root->right;
+        Node* then_node = root->left->right;
         if (if_node->left->value == 1){
             evaluate_statement(then_node->left,symbol_table);
-            // printf("heyyy\n");
+            // printf("if-then\n");
         }
 
     }
     if (strcmp(root->name,"if-then-else") == 0){
+        // printf("if-then-else\n");
         Node* if_node = root->left;
-        Node* then_node = root->right;
-        Node* else_node = root->extra;
-        if (if_node->left->value == 1){
+
+        Node* then_node = root->left->right;
+        Node* else_node = root->left->extra;
+        if (evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
-            // printf("heyyy\n");
+            //  printf("heyyy %d\n", if_node->left->value);
         }
         else{
             evaluate_statement(else_node->left,symbol_table);
@@ -96,7 +104,8 @@ void evaluate_write(Node* root,  Symbol* symbol_table){
 		  printf("console output : \n");
         //   printf("\n");
 		  while (para){
-			printf("%d\n", para->value);
+            // printf("%s", para->left->left->name);
+			printf("%d\n", evaluate_expr(para->left, symbol_table));
 			para = para->extra;
 		  }
           printf("\n");
@@ -110,27 +119,36 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
         
     }
     else{
-       fprintf(stderr, "Error: Assignment to an undefined variable!"); 
+        error_flag = 1;
+       fprintf(stderr, "Error: Assignment to an undefined variable!\n"); 
+
     }
    }
    else if (strcmp(root->name, "assign_array") == 0){
     // root->left->left->var_pointer->value.int_arrayval[root->left->right->value] = root->right->value;
-    root->left->left->var_pointer->value.int_arrayval[root->left->right->value] = evaluate_expr(root->right, symbol_table);
+    // printf("array  %d\n", evaluate_expr(root->left->right, symbol_table));
+    if (evaluate_expr(root->left->right, symbol_table) >= root->left->left->var_pointer->size){
+        error_flag = 1;
+        fprintf(stderr, "Index out of range!"); 
+        
+    }
+    root->left->left->var_pointer->value.int_arrayval[evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
    }
-   printf("printing symbol table values\n");
-   printsymboltable(symbol_table);
-   printf("\n-----------------------------\n");
+//    printf("printing symbol table values\n");
+//    printsymboltable(symbol_table);
+//    printf("\n-----------------------------\n");
 }
 
 void evaluate_for(Node* root, Symbol* symbol_table){
-    Node* initial = root->left;
-    Node* condition = root->left->extra;
-    Node* step = root->right;
-    Node* stmt_list = root->extra;
+    Node* conditions = root->left;
+    Node* initial = conditions;
+    Node* condition = conditions->right;
+    Node* step = conditions->extra;
+    Node* stmt_list = root->right->left;
     evaluate_assign(initial->left,symbol_table);
     while (evaluate_expr(condition->left,symbol_table)){
-        evaluate_statement(stmt_list->left, symbol_table);
-        evaluate_assign(step, symbol_table);
+        evaluate_statement(stmt_list, symbol_table);
+        evaluate_assign(step->left, symbol_table);
         if (!evaluate_expr(condition->left, symbol_table)) {
             break;
         }
@@ -140,89 +158,37 @@ void evaluate_for(Node* root, Symbol* symbol_table){
 
 
 
-
-
-
-// int evaluate_expr(Node* root, Symbol* symbol_table){
-//     if (root == NULL)
-//         return 0;
-//     if (strcmp(root->name, "number") == 0)
-//         return root->value;
-//     else if (strcmp(root->name,"var_expr") == 0)
-//         return root->value;
-//     else if (strcmp(root->name,"T") == 0 || strcmp(root->name, "F"))
-//         return root->value;
-//     else if (root->op == '+')
-//         return root->left->value + root->right->value;
-//     else if (root->op == '-')
-//         return root->left->value - root->right->value;
-//     else if (root->op == '*')
-//         return root->left->value * root->right->value;
-//     else if (root->op == '/'){
-//         // return root->left->value / root->right->value;
-//         if (root->right->value == 0) {
-//             fprintf(stderr,"Division by zero!"); 
-//             return 0;
-//         } else {
-//             return root->left->value / root->right->value;
-//         }
-//     }
-//     else if (root->op == '%'){
-//         // return root->left->value / root->right->value;
-//         if (root->right->value == 0) {
-//             fprintf(stderr,"Modulo by zero!"); 
-//             return 0;
-//         } else {
-//             return root->left->value % root->right->value;
-//         }
-//     }
-//     else if (root->op == '<')
-//         return root->left->value < root->right->value;
-//     else if (root->op == '>')
-//         return root->left->value > root->right->value;
-//     else if (root->op == 'G')
-//         return root->left->value >= root->right->value;
-//     else if (root->op == 'L')
-//         return root->left->value <= root->right->value;
-//     else if (root->op == 'N')
-//         return root->left->value != root->right->value;
-//     else if (root->op == 'E')
-//         return root->left->value == root->right->value;
-//     else if (strcmp(root->name, "Array_exp") == 0)
-//         return root->value;
-//     else if (root->op == '!')
-//         return !root->left->value;
-//     else if (root->op == '&')
-//         return root->left->value && root->right->value;
-//     else if (root->op == '|')
-//         return root->left->value || root->right->value;
-//     return 0;   
-// }
-
 int evaluate_expr(Node* root, Symbol* symbol_table) {
     if (root == NULL) return 0;
 
     if (strcmp(root->name, "number") == 0)
         return root->value;
+
     else if (strcmp(root->name, "var_expr") == 0) {
-        if (root->var_pointer) { 
-            return root->var_pointer->value.intval;
+        if (root->left->var_pointer) { 
+            // printf("%s == %d\n", root->left->var_pointer->varname, root->left->var_pointer->value.intval);
+            return root->left->var_pointer->value.intval;
         } else {
+            error_flag = 1;
             fprintf(stderr, "Error: Undefined variable!\n");
             return 0;
         }
     } 
-    else if (strcmp(root->name, "T") == 0 || strcmp(root->name, "F"))
+    else if (strcmp(root->name, "T") == 0 || strcmp(root->name, "F") == 0)
         return root->value;
-    else if (root->op == '+')
-        return evaluate_expr(root->left, symbol_table) + evaluate_expr(root->right, symbol_table);
-    else if (root->op == '-')
-        return evaluate_expr(root->left, symbol_table) - evaluate_expr(root->right, symbol_table);
+    else if (root->op == '+'){
+        // printf("add\n");
+        root->value = evaluate_expr(root->left, symbol_table) + evaluate_expr(root->right, symbol_table);
+        return evaluate_expr(root->left, symbol_table) + evaluate_expr(root->right, symbol_table);}
+    else if (root->op == '-'){
+        root->value = evaluate_expr(root->left, symbol_table) - evaluate_expr(root->right, symbol_table);
+        return evaluate_expr(root->left, symbol_table) - evaluate_expr(root->right, symbol_table);}
     else if (root->op == '*')
         return evaluate_expr(root->left, symbol_table) * evaluate_expr(root->right, symbol_table);
     else if (root->op == '/') {
         int denominator = evaluate_expr(root->right, symbol_table);
         if (denominator == 0) {
+            error_flag = 1;
             fprintf(stderr,"Division by zero!\n");
             return 0;
         }
@@ -231,6 +197,7 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (root->op == '%') {
         int denominator = evaluate_expr(root->right, symbol_table);
         if (denominator == 0) {
+            error_flag = 1;
             fprintf(stderr,"Modulo by zero!\n");
             return 0;
         }
@@ -257,3 +224,4 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     
     return 0;   
 }
+

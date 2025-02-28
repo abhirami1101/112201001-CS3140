@@ -58,6 +58,10 @@ Prog : Gdecl_sec stmt_list  {
     }
     //  printf("error flag === %d\n", error_flag);
     evaluate_statement(root->left, symbol_table);
+    //  printf("error flag === %d\n", error_flag);
+    if (error_flag == 1){
+        return 0;
+    }
     printroot(root, 0);
 }
     | BEG Gdecl_sec stmt_list END {

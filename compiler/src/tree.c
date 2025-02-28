@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int error_flag;
+int error_flag = 0;
 
 
 Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
@@ -58,9 +58,11 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
         evaluate_for(root,symbol_table);
     }
     // printf("\n ------------------------------ \n");
+    if (error_flag != 1){
     printsymboltable(symbol_table);
-    printf("\n ------------------------------ \n");
-    // Always evaluate extra statements in sequence
+    printf(" ------------------------------ \n");
+    }
+    // to evaluate next statements (connected through extra)
     if (root->extra != NULL) {
         evaluate_statement(root->extra,symbol_table);
         
@@ -69,14 +71,16 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
 
 
 void evaluate_if(Node* root ,Symbol* symbol_table){
+    // printf("[[[]]]]] %s", root->name);
     if (root == NULL)
         return;
     if (strcmp(root->name,"if-then") == 0){
         Node* if_node = root->left;
         Node* then_node = root->left->right;
-        if (if_node->left->value == 1){
+        // printf("if-then ------ %s\n", then_node->left->name);
+        if (evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
-            // printf("if-then\n");
+            //  printf("if-then ------ %s\n", then_node->left->name);
         }
 
     }
@@ -89,6 +93,7 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
         if (evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
             //  printf("heyyy %d\n", if_node->left->value);
+            // printf("if-then-else ------ %s\n", then_node->left->name);
         }
         else{
             evaluate_statement(else_node->left,symbol_table);
@@ -129,7 +134,7 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
     // printf("array  %d\n", evaluate_expr(root->left->right, symbol_table));
     if (evaluate_expr(root->left->right, symbol_table) >= root->left->left->var_pointer->size){
         error_flag = 1;
-        fprintf(stderr, "Index out of range!"); 
+        fprintf(stderr, "Error : Index out of range!\n"); 
         
     }
     root->left->left->var_pointer->value.int_arrayval[evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
@@ -221,6 +226,15 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
         return evaluate_expr(root->left, symbol_table) && evaluate_expr(root->right, symbol_table);
     else if (root->op == '|')
         return evaluate_expr(root->left, symbol_table) || evaluate_expr(root->right, symbol_table);
+    else if (strcmp(root->name, "Array_exp") == 0){
+        if (root->left->var_pointer->type != TYPE_ARRAY_INT){
+            error_flag = 1;
+            fprintf(stderr,"Not an array so indexing is not possible");
+            return 0;
+        }
+        return root->left->var_pointer->value.int_arrayval[evaluate_expr(root->right,symbol_table)];
+
+    }
     
     return 0;   
 }

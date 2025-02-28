@@ -3,7 +3,7 @@
 
 #include "symbol_table.h"
 
-// int error_flag = 0;
+extern int error_flag;
 
 typedef struct Node{
 	char op;

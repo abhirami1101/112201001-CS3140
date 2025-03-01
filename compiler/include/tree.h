@@ -24,7 +24,6 @@ void printroot(Node* root, int depth);
 void evaluate_if(Node* root, Symbol* symbol_table);
 void evaluate_write(Node* root, Symbol* symbol_table);
 void evaluate_statement(Node* root, Symbol* symbol_table);
-void evaluate_if(Node* root, Symbol* symbol_table);
 void evaluate_assign(Node* root, Symbol* symbol_table);
 void evaluate_for(Node* root, Symbol* symbol_table);
 int evaluate_expr(Node* root, Symbol* symbol_table);

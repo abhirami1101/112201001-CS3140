@@ -47,7 +47,10 @@ letter	[a-zA-Z]
 					}	
 "boolean"				{ return T_BOOL;
 					}	
-"begindecl"				{ return DECL;
+"begindecl"				{ return BEGDECL;
+				}
+
+"decl"				{ return DECL;
 				}
 "enddecl"				{ return ENDDECL;
 				}
@@ -66,7 +69,11 @@ letter	[a-zA-Z]
 "endwhile"			{ return ENDWHILE;
 				}
 "for" 				{ return FOR;
-				}		
+				}
+"break"				{ return BREAK;
+
+}	
+
 "=="				{
 	return EQUALEQUAL;
 					}	

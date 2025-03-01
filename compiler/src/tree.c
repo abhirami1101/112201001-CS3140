@@ -5,6 +5,8 @@
 
 int error_flag = 0;
 
+int break_flag = 0;
+
 
 Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
 	Node* new = (Node*) malloc(sizeof(Node));
@@ -56,6 +58,10 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
     }
     else if (strcmp(root->name, "for-loop") == 0){
         evaluate_for(root,symbol_table);
+    }
+    else if (strcmp(root->name, "break") == 0){
+        break_flag = 1;
+        return;
     }
     // printf("\n ------------------------------ \n");
     if (error_flag != 1){
@@ -150,14 +156,20 @@ void evaluate_for(Node* root, Symbol* symbol_table){
     Node* condition = conditions->right;
     Node* step = conditions->extra;
     Node* stmt_list = root->right->left;
-    evaluate_assign(initial->left,symbol_table);
+    if (initial->left != NULL)
+        evaluate_assign(initial->left,symbol_table);
     while (evaluate_expr(condition->left,symbol_table)){
-        evaluate_statement(stmt_list, symbol_table);
-        evaluate_assign(step->left, symbol_table);
-        if (!evaluate_expr(condition->left, symbol_table)) {
+        if (stmt_list != NULL)
+            evaluate_statement(stmt_list, symbol_table);
+        if (break_flag == 1)
+            break;
+        if (step->left != NULL)
+            evaluate_assign(step->left, symbol_table);
+        if (!evaluate_expr(condition->left, symbol_table) ) {
             break;
         }
     }
+    break_flag = 0;
 
 }
 
@@ -238,4 +250,3 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     
     return 0;   
 }
-

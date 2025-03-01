@@ -28,7 +28,8 @@ this can be used incase of printing all the outputs of print together
 %token BEG END
 %token T_INT T_BOOL
 %token READ WRITE
-%token DECL ENDDECL
+%token BEGDECL ENDDECL DECL
+%token BREAK
 %token <var> VAR
 %token <num> NUM
 %token IF THEN ELSE ENDIF
@@ -64,18 +65,27 @@ Prog : Gdecl_sec stmt_list  {
     }
     printroot(root, 0);
 }
-    | BEG Gdecl_sec stmt_list END {
+    |  Gdecl_sec BEG stmt_list END {
 		
-        Node* temp = $2;
+        Node* temp = $1;
     while (temp->extra != NULL) temp = temp->extra;
     temp->extra = $3;  
-    root = createnode(0, "program", 0, NULL, NULL, NULL, $2);
+    root = createnode(0, "program", 0, NULL, $1, NULL, NULL);
+    evaluate_statement(root->left, symbol_table);
+    if (error_flag == 1){
+        return 0;
+    }
     printroot(root, 0);
 	}
 
 		;
 
 Gdecl_sec:	DECL Gdecl_list ENDDECL	{ printf("printing symbol table values\n");
+			 printsymboltable(symbol_table); 
+	$$ = createnode(0, "decl_list", 0, NULL, $2, NULL, NULL);
+// $$ = $2;
+}
+    | BEGDECL Gdecl_list ENDDECL	{ printf("printing symbol table values\n");
 			 printsymboltable(symbol_table); 
 	$$ = createnode(0, "decl_list", 0, NULL, $2, NULL, NULL);
 // $$ = $2;
@@ -181,6 +191,7 @@ statement:	assign_stmt  ';'		{
         | cond_stmt {$$ = $1;
         // evaluate_statement($$);
         }
+        | BREAK ';' { $$ = createnode(0, "break", 0, NULL, NULL, NULL, NULL); }
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
@@ -233,6 +244,9 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
             }
 	    |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
                 $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL),createnode(0, "step", 0, NULL, $7, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $10, NULL, NULL), NULL);
+            }
+        |    FOR '(' ';'  expr ';'  ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL, createnode(0, "final-condition", 0, NULL, $4, NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $8, NULL, NULL), NULL);
             }
 		;
 
@@ -319,6 +333,7 @@ expr	:	NUM  {
 var_expr: VAR { 
     Symbol* sym = lookupSymbol(symbol_table, $1);
     if (!sym) { 
+        printf("%s\n", $1);
         yyerror("Error: Undefined variable used in expression");
         return 0;
     }
@@ -328,7 +343,8 @@ var_expr: VAR {
 array_expr : VAR '[' expr ']'{
     Symbol* sym = lookupSymbol(symbol_table, $1);
     if (!sym){
-        yyerror("Error: Undefined variable used in expression");
+        printf("%s\n", $1);
+        yyerror("Error: Undefined variable used in expression ");
         return 0; 
     }
     if (evaluate_expr($3, symbol_table) >= sym->size){

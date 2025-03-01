@@ -94,4 +94,17 @@ In the assignment 3 :
   Added if-then and if-then-else
   started working with for loop (infinite loop issues should resolve them)
 
+  resolved the infinite loop issues caused due to incorrect evaluate_assign 
+
+  for loop corrected, with and without step and initial condition
+
+  break statements included
+
+  out of bound access error detected
+
+  
+
+
+
+
 

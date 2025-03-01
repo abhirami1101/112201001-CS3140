@@ -63,6 +63,7 @@ Prog : Gdecl_sec stmt_list  {
     if (error_flag == 1){
         return 0;
     }
+    printf("\n---the syntax tree---\n");
     printroot(root, 0);
 }
     |  Gdecl_sec BEG stmt_list END {
@@ -99,7 +100,7 @@ Gdecl_list:	/* NULL  */ {$$ = NULL;}
             // while($1->extra == NULL)
 			// $1->extra = $2;
             Node* temp = $1;
-            while (temp->extra != NULL) temp = temp->extra;  // Find last node, where we can append
+            while (temp->extra != NULL) temp = temp->extra;  // find last node, where we can append
             temp->extra = $2;  // other statements would be chained to the end
             $$ = $1;  
         }
@@ -247,6 +248,9 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
             }
         |    FOR '(' ';'  expr ';'  ')' '{' stmt_list '}'   { 
                 $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL, createnode(0, "final-condition", 0, NULL, $4, NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $8, NULL, NULL), NULL);
+            }
+        |    FOR '(' ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL,createnode(0, "final-condition", 0, NULL, $4, NULL, NULL),createnode(0, "step", 0, NULL, $6, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $9, NULL, NULL), NULL);
             }
 		;
 

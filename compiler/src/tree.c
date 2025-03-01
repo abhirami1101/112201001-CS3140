@@ -5,7 +5,9 @@
 
 int error_flag = 0;
 
-int break_flag = 0;
+int break_flag = 0; /* to check for any break statements evaluated 
+after the evaluation of every for-loop statements it should be reset to 1 .. 
+so that even nested loops would be handled efficiently */
 
 
 Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
@@ -26,7 +28,7 @@ Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node*
 void printroot(Node* node, int depth) {
     if (node == NULL) return;
     for (int i = 0; i < depth; i++) {
-        printf("  ");  
+        printf("|  ");  
     }
     if (node->name) {
         printf("|-- %s", node->name);
@@ -65,8 +67,10 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
     }
     // printf("\n ------------------------------ \n");
     if (error_flag != 1){
+    printf("--printing  symbol table values--\n");
     printsymboltable(symbol_table);
-    printf(" ------------------------------ \n");
+    printf("---------------------------------\n");
+    
     }
     // to evaluate next statements (connected through extra)
     if (root->extra != NULL) {
@@ -98,7 +102,7 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
         Node* else_node = root->left->extra;
         if (evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
-            //  printf("heyyy %d\n", if_node->left->value);
+            //  printf("condition %d\n", if_node->left->value);
             // printf("if-then-else ------ %s\n", then_node->left->name);
         }
         else{

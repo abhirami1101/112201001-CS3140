@@ -84,6 +84,7 @@ void assign(Symbol* var, int index,  int value){
 
 void printsymboltable(Symbol* table){
     if (table != NULL){
+
         if (table->is_function == 0 && table->size == 0)
             printf("%s = %d\n", table->varname, table->value.intval);
         else{

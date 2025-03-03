@@ -6,6 +6,7 @@ LEXFILE = src/compiler.l
 OUTPUTFILE = bin/compiler
 SYMBOL_TABLE = src/symbol_table.c
 TREE = src/tree.c
+BIN = bin
 
 PARSERHEADER = y.tab.h
 PARSERCFILE = y.tab.c 
@@ -15,10 +16,13 @@ all : $(OUTPUTFILE)
 
 
 $(OUTPUTFILE) : $(PARSERCFILE) $(FLEX) $(SYMBOL_TABLE) $(TREE)
+	mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(PARSERCFILE) $(PARSERHEADER) : $(YACCFILE)
 	yacc -d $(YACCFILE)
+
+
 
 $(FLEX) : $(LEXFILE)
 	flex $(LEXFILE)

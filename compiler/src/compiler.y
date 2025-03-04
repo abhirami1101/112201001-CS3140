@@ -369,6 +369,8 @@ void yyerror ( const char  *s) {
 
 int main(){
 yyparse();
+free_tree(root);
+free_symbol_table(symbol_table);
 }
 
 

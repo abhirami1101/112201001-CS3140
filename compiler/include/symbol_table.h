@@ -31,6 +31,7 @@ void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunctio
 Symbol* lookupSymbol(Symbol* root,  char* name);
 void assign(Symbol* var, int index, int value);
 void printsymboltable(Symbol* table);
+void free_symbol_table(Symbol* sym);
 
 #endif
 

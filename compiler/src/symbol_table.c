@@ -100,3 +100,8 @@ void printsymboltable(Symbol* table){
         return;
     }
 }
+
+void free_symbol_table(Symbol* sym){
+    free(sym);
+    printf("----Free symbol table-----\n");
+}

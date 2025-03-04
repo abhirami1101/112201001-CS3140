@@ -25,6 +25,12 @@ Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node*
 	return new;
 }
 
+void free_tree(Node* node){
+    // printf("----------\n");
+    printf("----freeing the tree-----\n");
+    free(node);
+}
+
 void printroot(Node* node, int depth) {
     if (node == NULL) return;
     for (int i = 0; i < depth; i++) {

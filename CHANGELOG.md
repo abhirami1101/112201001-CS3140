@@ -100,7 +100,9 @@ In the assignment 3 :
 
   break statements included
 
-  out of bound access error detected
+  out of bound access error detected -- solved
+
+  continue statements included
 
   
 

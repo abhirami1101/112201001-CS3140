@@ -9,6 +9,8 @@ int break_flag = 0; /* to check for any break statements evaluated
 after the evaluation of every for-loop statements it should be reset to 1 .. 
 so that even nested loops would be handled efficiently */
 
+int continue_flag = 0;
+
 
 Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
 	Node* new = (Node*) malloc(sizeof(Node));
@@ -53,7 +55,7 @@ void printroot(Node* node, int depth) {
 
 
 void evaluate_statement(Node* root,  Symbol* symbol_table){
-    if (root == NULL) return;
+    if (root == NULL ) return;
 
     if (strcmp(root->name, "if-then") == 0 || strcmp(root->name, "if-then-else") == 0) {
         evaluate_if(root,symbol_table);
@@ -71,6 +73,10 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
         break_flag = 1;
         return;
     }
+    else if (strcmp(root->name, "continue") == 0){
+        continue_flag = 1;
+        return;
+    }
     // printf("\n ------------------------------ \n");
     if (error_flag != 1){
     printf("--printing  symbol table values--\n");
@@ -79,7 +85,7 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
     
     }
     // to evaluate next statements (connected through extra)
-    if (root->extra != NULL) {
+    if (root->extra != NULL && continue_flag == 0 && break_flag == 0) {
         evaluate_statement(root->extra,symbol_table);
         
     }
@@ -168,11 +174,33 @@ void evaluate_for(Node* root, Symbol* symbol_table){
     Node* stmt_list = root->right->left;
     if (initial->left != NULL)
         evaluate_assign(initial->left,symbol_table);
+    if (condition->left == NULL){
+        while(true){
+            if (stmt_list != NULL)
+            evaluate_statement(stmt_list, symbol_table);
+        if (break_flag == 1)
+            break;
+        if (continue_flag == 1){
+            if (step->left != NULL)
+                evaluate_assign(step->left, symbol_table);
+                continue_flag = 0;
+                continue;
+        }
+        if (step->left != NULL)
+            evaluate_assign(step->left, symbol_table);  
+        }
+    }
     while (evaluate_expr(condition->left,symbol_table)){
         if (stmt_list != NULL)
             evaluate_statement(stmt_list, symbol_table);
         if (break_flag == 1)
             break;
+        if (continue_flag == 1){
+            if (step->left != NULL)
+                evaluate_assign(step->left, symbol_table);
+                continue_flag = 0;
+                continue;
+        }
         if (step->left != NULL)
             evaluate_assign(step->left, symbol_table);
         if (!evaluate_expr(condition->left, symbol_table) ) {
@@ -180,6 +208,7 @@ void evaluate_for(Node* root, Symbol* symbol_table){
         }
     }
     break_flag = 0;
+    
 
 }
 

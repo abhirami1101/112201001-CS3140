@@ -29,7 +29,7 @@ this can be used incase of printing all the outputs of print together
 %token T_INT T_BOOL
 %token READ WRITE
 %token BEGDECL ENDDECL DECL
-%token BREAK
+%token BREAK CONTINUE
 %token <var> VAR
 %token <num> NUM
 %token IF THEN ELSE ENDIF
@@ -38,7 +38,7 @@ this can be used incase of printing all the outputs of print together
 %token WHILE DO ENDWHILE FOR 
 %token T F 
 %token MAIN RETURN
-%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt 
+%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt for_stmt
 %type <node> stmt_list statement assign_stmt var_expr expr write_stmt para_list para_list1 para
 
 
@@ -57,14 +57,15 @@ Prog : Gdecl_sec stmt_list  {
     if ($1) {
         $1->extra = $2;  
     }
+    printf("\n---the syntax tree---\n");
+    printroot(root, 0);
+    printf("---the syntax tree---\n\n");
     //  printf("error flag === %d\n", error_flag);
     evaluate_statement(root->left, symbol_table);
     //  printf("error flag === %d\n", error_flag);
     if (error_flag == 1){
         return 0;
     }
-    printf("\n---the syntax tree---\n");
-    printroot(root, 0);
 }
     |  Gdecl_sec BEG stmt_list END {
 		
@@ -72,11 +73,11 @@ Prog : Gdecl_sec stmt_list  {
     while (temp->extra != NULL) temp = temp->extra;
     temp->extra = $3;  
     root = createnode(0, "program", 0, NULL, $1, NULL, NULL);
+    printroot(root, 0);
     evaluate_statement(root->left, symbol_table);
     if (error_flag == 1){
         return 0;
     }
-    printroot(root, 0);
 	}
 
 		;
@@ -193,6 +194,7 @@ statement:	assign_stmt  ';'		{
         // evaluate_statement($$);
         }
         | BREAK ';' { $$ = createnode(0, "break", 0, NULL, NULL, NULL, NULL); }
+        | CONTINUE ';' {  $$ = createnode(0, "continue", 0, NULL, NULL, NULL, NULL); }
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
@@ -243,7 +245,10 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
 		|	IF expr THEN stmt_list ELSE stmt_list ENDIF 	{ 
             $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,createnode(0,"then", 0, NULL, $4,NULL,NULL),createnode(0,"else", 0, NULL, $6,NULL,NULL)), NULL, NULL);  
             }
-	    |    FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
+	    | for_stmt {$$ = $1;}
+		;
+
+for_stmt :     FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
                 $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL),createnode(0, "step", 0, NULL, $7, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $10, NULL, NULL), NULL);
             }
         |    FOR '(' ';'  expr ';'  ')' '{' stmt_list '}'   { 
@@ -252,7 +257,22 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
         |    FOR '(' ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
                 $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL,createnode(0, "final-condition", 0, NULL, $4, NULL, NULL),createnode(0, "step", 0, NULL, $6, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $9, NULL, NULL), NULL);
             }
-		;
+        |    FOR '(' ';' ';'  ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL,createnode(0, "final-condition", 0, NULL, NULL, NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $7, NULL, NULL), NULL);
+            }
+        |    FOR '(' assign_stmt ';' ';'  ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, NULL, NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $8, NULL, NULL), NULL);
+            };
+        |    FOR '('  ';' ';' assign_stmt ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, NULL,createnode(0, "final-condition", 0, NULL,$5 , NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $8, NULL, NULL), NULL);
+            }
+        |    FOR '(' assign_stmt ';' expr ';'  ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, $5, NULL, NULL),createnode(0, "step", 0, NULL, NULL, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $9, NULL, NULL), NULL);
+            }
+        |    FOR '(' assign_stmt  ';' ';'  assign_stmt ')' '{' stmt_list '}'   { 
+                $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, NULL, NULL, NULL),createnode(0, "step", 0, NULL, $6, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $9, NULL, NULL), NULL);
+            };
+
 
 expr	:	NUM  { 
             $$ = createnode(0, "number", $1, NULL, NULL, NULL, NULL); 

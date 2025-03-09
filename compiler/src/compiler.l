@@ -74,6 +74,10 @@ letter	[a-zA-Z]
 
 }	
 
+"continue"				{ return CONTINUE;
+
+}
+
 "=="				{
 	return EQUALEQUAL;
 					}	

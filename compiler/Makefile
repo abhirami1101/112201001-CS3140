@@ -22,7 +22,8 @@ $(OUTPUTFILE) : $(PARSERCFILE) $(FLEX) $(SYMBOL_TABLE) $(TREE)
 $(PARSERCFILE) $(PARSERHEADER) : $(YACCFILE)
 	yacc -d $(YACCFILE)
 
-
+debug : $(OUTPUTFILE)
+	lldb ./$(OUTPUTFILE)  # Start the debugger with the compiled binary
 
 $(FLEX) : $(LEXFILE)
 	flex $(LEXFILE)

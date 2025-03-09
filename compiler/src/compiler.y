@@ -33,7 +33,7 @@ this can be used incase of printing all the outputs of print together
 %token <var> VAR
 %token <num> NUM
 %token IF THEN ELSE ENDIF
-// %token LOGICAL_AND LOGICAL_NOT LOGICAL_OR
+%token LOGICAL_AND LOGICAL_NOT LOGICAL_OR
 %token <op> EQUALEQUAL LESSTHANOREQUAL GREATERTHANOREQUAL NOTEQUAL
 %token WHILE DO ENDWHILE FOR 
 %token T F 

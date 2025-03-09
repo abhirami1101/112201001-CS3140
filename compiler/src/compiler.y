@@ -57,15 +57,15 @@ Prog : Gdecl_sec stmt_list  {
     if ($1) {
         $1->extra = $2;  
     }
-    printf("\n---the syntax tree---\n");
-    printroot(root, 0);
-    printf("---the syntax tree---\n\n");
+
     //  printf("error flag === %d\n", error_flag);
     evaluate_statement(root->left, symbol_table);
     //  printf("error flag === %d\n", error_flag);
     if (error_flag == 1){
         return 0;
     }
+    printf("\n---the syntax tree---\n");
+    printroot(root, 0);
 }
     |  Gdecl_sec BEG stmt_list END {
 		
@@ -73,11 +73,12 @@ Prog : Gdecl_sec stmt_list  {
     while (temp->extra != NULL) temp = temp->extra;
     temp->extra = $3;  
     root = createnode(0, "program", 0, NULL, $1, NULL, NULL);
-    printroot(root, 0);
+ 
     evaluate_statement(root->left, symbol_table);
     if (error_flag == 1){
         return 0;
     }
+       printroot(root, 0);
 	}
 
 		;

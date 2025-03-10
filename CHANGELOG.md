@@ -105,7 +105,9 @@ In the assignment 3 :
   continue statements included
 
   
-
+--TEST 2 
+      added floating point -- variables get updated accordingly
+      write always gives a floating point answer
 
 
 

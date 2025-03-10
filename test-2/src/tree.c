@@ -12,7 +12,7 @@ so that even nested loops would be handled efficiently */
 int continue_flag = 0;
 
 
-Node* createnode(char op, char* name, int value,  Symbol* var, Node* left, Node* right,Node* extra){
+Node* createnode(char op, char* name, double value,  Symbol* var, Node* left, Node* right,Node* extra){
 	Node* new = (Node*) malloc(sizeof(Node));
 	new->op = op;
 	new->name = strdup(name);
@@ -132,7 +132,15 @@ void evaluate_write(Node* root,  Symbol* symbol_table){
         //   printf("\n");
 		  while (para){
             // printf("%s", para->left->left->name);
-			printf("%d\n", evaluate_expr(para->left, symbol_table));
+			// printf("%d\n", evaluate_expr(para->left, symbol_table));
+            if (para->left->var_pointer){
+                if (para->left->var_pointer->type == TYPE_INT) // if its a variable with
+                    printf("%d\n", (int)evaluate_expr(para->left, symbol_table));
+                if (para->left->var_pointer->type == TYPE_FLOAT)
+                    printf("%f\n", evaluate_expr(para->left, symbol_table));
+            }
+            else
+                printf("%f\n", evaluate_expr(para->left, symbol_table)); //else it just prints a float value irrespective of the expression
 			para = para->extra;
 		  }
           printf("\n");
@@ -142,8 +150,10 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
    if (strcmp(root->name, "assign") == 0){
     if (root->left->var_pointer){
         // root->left->var_pointer->value.intval = root->right->value;
-        root->left->var_pointer->value.intval = evaluate_expr(root->right, symbol_table);
-        
+        if (root->left->var_pointer->type == TYPE_INT)
+            root->left->var_pointer->value.intval = evaluate_expr(root->right, symbol_table);
+        if (root->left->var_pointer->type == TYPE_FLOAT)
+            root->left->var_pointer->value.floatval = evaluate_expr(root->right, symbol_table);
     }
     else{
         error_flag = 1;
@@ -159,7 +169,7 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
         fprintf(stderr, "Error : Index out of range!\n"); 
         
     }
-    root->left->left->var_pointer->value.int_arrayval[evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+    root->left->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
    }
 //    printf("printing symbol table values\n");
 //    printsymboltable(symbol_table);
@@ -214,16 +224,21 @@ void evaluate_for(Node* root, Symbol* symbol_table){
 
 
 
-int evaluate_expr(Node* root, Symbol* symbol_table) {
+double evaluate_expr(Node* root, Symbol* symbol_table) {
     if (root == NULL) return 0;
 
     if (strcmp(root->name, "number") == 0)
+        return root->value;
+    if (strcmp(root->name, "flnumber") == 0) // we can consider float also as a number (should we have a special consideration for float?)
         return root->value;
 
     else if (strcmp(root->name, "var_expr") == 0) {
         if (root->left->var_pointer) { 
             // printf("%s == %d\n", root->left->var_pointer->varname, root->left->var_pointer->value.intval);
-            return root->left->var_pointer->value.intval;
+            if (root->left->var_pointer->type == TYPE_INT)
+                return root->left->var_pointer->value.intval;
+            else if (root->left->var_pointer->type == TYPE_FLOAT)
+                return root->left->var_pointer->value.floatval;
         } else {
             error_flag = 1;
             fprintf(stderr, "Error: Undefined variable!\n");
@@ -257,7 +272,7 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
             fprintf(stderr,"Modulo by zero!\n");
             return 0;
         }
-        return evaluate_expr(root->left, symbol_table) % denominator;
+        return (int)evaluate_expr(root->left, symbol_table) % denominator;
     }
     else if (root->op == '<')
         return evaluate_expr(root->left, symbol_table) < evaluate_expr(root->right, symbol_table);
@@ -283,7 +298,7 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
             fprintf(stderr,"Not an array so indexing is not possible");
             return 0;
         }
-        return root->left->var_pointer->value.int_arrayval[evaluate_expr(root->right,symbol_table)];
+        return root->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->right,symbol_table)];
 
     }
     

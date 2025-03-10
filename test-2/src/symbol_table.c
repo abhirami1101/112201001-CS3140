@@ -6,7 +6,7 @@
 
 
 
-Symbol* createSymbol(char* name, Type type, int size, int isfunction) {
+Symbol* createSymbol(char* name, Type type, int size, int isfunction, int* dim) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->varname = strdup(name);
     sym->type = type;
@@ -21,22 +21,28 @@ Symbol* createSymbol(char* name, Type type, int size, int isfunction) {
         sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
         sym->size = size;
     }
-    
-
+    else if (type == TYPE_2DARRAY_INT){
+        sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
+        sym->size = size;
+        if (dim != NULL){
+        sym->dim[0] = dim[0];
+        sym->dim[1] = dim[1];
+        }
+    }
     sym->next = NULL;
     return sym;
 }
 
-void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction) {
+void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction, int* dim) {
     if (*root == NULL) {
-        *root = createSymbol(name, type, size, isfunction);
+        *root = createSymbol(name, type, size, isfunction, dim);
         return;
     }
     Symbol* temp = *root;
     while (temp->next != NULL) {
         temp = temp->next;
     }
-    temp->next = createSymbol(name, type, size, isfunction);
+    temp->next = createSymbol(name, type, size, isfunction, dim);
 }
 
 /*
@@ -94,10 +100,20 @@ void printsymboltable(Symbol* table){
                 printf("%s = %f\n", table->varname, table->value.floatval);
             
         }
-        else{
+        else if (table->type == TYPE_ARRAY_INT){
             printf("%s = [", table->varname);
             for (int i = 0; i < table->size; i++){
                 printf("%d, ",table->value.int_arrayval[i]);
+            }
+            printf("]\n");
+        }
+        else if (table->type == TYPE_2DARRAY_INT){
+            printf("%s = [", table->varname);
+            for (int i = 0; i < table->dim[0]; i++){
+                printf("[");
+                for (int j = 0; j < table->dim[1]; j++)
+                    printf("%d, ",table->value.int_arrayval[i * table->dim[1] + j]);
+                printf("],");
             }
             printf("]\n");
         }

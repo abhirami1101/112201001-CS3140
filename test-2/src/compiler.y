@@ -40,7 +40,7 @@ this can be used incase of printing all the outputs of print together
 %token WHILE DO ENDWHILE FOR 
 %token T F 
 %token MAIN RETURN
-%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt for_stmt
+%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt for_stmt do_while
 %type <node> stmt_list statement assign_stmt var_expr expr write_stmt para_list para_list1 para
 
 
@@ -118,7 +118,7 @@ else if (strcmp($1->name, "boolean") == 0) t = TYPE_BOOL;
 else if (strcmp($1->name, "float") == 0) t = TYPE_FLOAT;
 			Node* p = $2;
 			while(p != NULL ){
-                if (strcmp(p->name,"Array")!=0)
+                if (strcmp(p->name,"Array")!=0 && strcmp(p->name, "2D_Array") != 0)
 				    p->var_pointer->type = t;
 				p=p->extra;
 			}
@@ -143,7 +143,7 @@ Gid:
     VAR { 
         Symbol* sym = lookupSymbol(symbol_table, $1);
         if (sym == NULL) {
-            insertSymbol(&symbol_table, $1, TYPE_INT, 0, 0); 
+            insertSymbol(&symbol_table, $1, TYPE_INT, 0, 0, NULL); 
             sym = lookupSymbol(symbol_table, $1); 
             if (!sym) { 
                 yyerror("Error: Failed to insert symbol!"); 
@@ -156,7 +156,7 @@ Gid:
         // printf("hii"); 
         Symbol* sym = lookupSymbol(symbol_table, $1);
         if (sym == NULL) {
-            insertSymbol(&symbol_table, $1, TYPE_ARRAY_INT, $3, 0); 
+            insertSymbol(&symbol_table, $1, TYPE_ARRAY_INT, $3, 0, NULL); 
             sym = lookupSymbol(symbol_table, $1); 
             if (!sym) { 
                 yyerror("Error: Failed to insert symbol!"); 
@@ -164,6 +164,23 @@ Gid:
             }
         }
         $$ = createnode(0, "Array", 0, NULL, createnode(0, "size", $3, NULL, NULL,NULL,NULL), createnode(0, $1, 0, sym, NULL, NULL,NULL),NULL);
+    }
+    | VAR '[' NUM ']' '['NUM']' {  
+        // printf("hii"); 
+        Symbol* sym = lookupSymbol(symbol_table, $1);
+        if (sym == NULL) {
+            int dim[2];
+            dim[0] = $3;
+            dim[1] = $6;
+            insertSymbol(&symbol_table, $1, TYPE_2DARRAY_INT, $3,  0, dim); 
+            sym = lookupSymbol(symbol_table, $1); 
+            if (!sym) { 
+                yyerror("Error: Failed to insert symbol!"); 
+                exit(1);
+            }
+        }
+        // printf("got a 2d array %d\n", $3 * $6);
+        $$ = createnode(0, "2D_Array", 0, NULL, createnode(0, "size", $3 * $6, NULL, NULL,NULL,NULL), createnode(0, $1, 0, sym, NULL, NULL,NULL),NULL);
     }
 ;
 
@@ -253,6 +270,7 @@ cond_stmt:	IF expr THEN stmt_list ENDIF 	{
             $$ = createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,createnode(0,"then", 0, NULL, $4,NULL,NULL),createnode(0,"else", 0, NULL, $6,NULL,NULL)), NULL, NULL);  
             }
 	    | for_stmt {$$ = $1;}
+        | do_while {$$ = $1;}
 		;
 
 for_stmt :     FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list '}'   { 
@@ -280,6 +298,8 @@ for_stmt :     FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list
                 $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3,createnode(0, "final-condition", 0, NULL, NULL, NULL, NULL),createnode(0, "step", 0, NULL, $6, NULL, NULL)), createnode(0, "in-loop", 0, NULL, $9, NULL, NULL), NULL);
             };
 
+
+do_while : {};
 
 expr	:	NUM  { 
             $$ = createnode(0, "number", $1, NULL, NULL, NULL, NULL); 
@@ -359,6 +379,16 @@ expr	:	NUM  {
                 $$ = createnode(0, "Array_exp", sym->value.int_arrayval[(int)$3->value], NULL, $1, $3, NULL);
             }
         }
+        | var_expr '['expr']''['expr']'{
+            Symbol* sym = lookupSymbol(symbol_table, $1->name);
+            if (sym->type != TYPE_2DARRAY_INT){
+                yyerror("Not array so indexing is not possible");
+                $$ = NULL;
+            }
+            else{
+                $$ = createnode(0, "2d_Array_exp", sym->value.int_arrayval[(int)$3->value*sym->dim[1] + (int)$6->value], NULL, $1, createnode(0, "2d_array_index", 0, NULL, $3, $6, NULL), NULL);
+            }
+        }
         |	LOGICAL_NOT expr	{ $$ = createnode('!', "not", !$2->value, NULL, $2,NULL,NULL );						}
 		|	expr LOGICAL_AND expr	{ $$ = createnode('&', "and", $1->value && $3->value, NULL, $1, $3,NULL );						}
 		|	expr LOGICAL_OR expr	{ 	$$ = createnode('|', "or", $1->value || $3->value, NULL, $1, $3,NULL );					}
@@ -379,7 +409,12 @@ array_expr : VAR '[' expr ']'{
     Symbol* sym = lookupSymbol(symbol_table, $1);
     if (!sym){
         printf("%s\n", $1);
-        yyerror("Error: Undefined variable used in expression ");
+        yyerror("Error: Undefined variable used in expression\n ");
+        return 0; 
+    }
+    if (sym->type != TYPE_ARRAY_INT){
+        printf("%s\n", $1);
+        yyerror("Error: Variable is not an array\n ");
         return 0; 
     }
     if (evaluate_expr($3, symbol_table) >= sym->size){
@@ -388,8 +423,27 @@ array_expr : VAR '[' expr ']'{
     }
     $$ = createnode(0, "Array_exp", sym->value.int_arrayval[(int)$3->value], NULL, createnode(0, $1, 0, sym, NULL, NULL,NULL), $3, NULL);
 }
+        | VAR '['expr']''['expr']'{
+                Symbol* sym = lookupSymbol(symbol_table, $1);
+                if (!sym){
+                    printf("%s\n", $1);
+                    yyerror("Error: Undefined variable used in expression\n ");
+                    return 0; 
+                }
+                if (sym->type != TYPE_2DARRAY_INT){
+                    printf("%s\n", $1);
+                    yyerror("Error: Variable is not a 2D array\n ");
+                    return 0; 
+                }
+                if (evaluate_expr($3, symbol_table) >= sym->dim[0] || evaluate_expr($6, symbol_table) >= sym->dim[1]){
+                yyerror("Error: index out of range"); 
+                return 0; 
+                }
+        $$ = createnode(0, "2d_Array_exp", sym->value.int_arrayval[(int)$3->value * sym->dim[1] +(int)$6->value], NULL, createnode(0, $1, 0, sym, NULL, NULL,NULL), createnode(0, "2d_array_index", 0, NULL, $3, $6, NULL), NULL);
+        }
 
 
+                  
 
 
 %%

@@ -164,16 +164,30 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
    else if (strcmp(root->name, "assign_array") == 0){
     // root->left->left->var_pointer->value.int_arrayval[root->left->right->value] = root->right->value;
     // printf("array  %d\n", evaluate_expr(root->left->right, symbol_table));
+    if (strcmp(root->left->right->name,"2d_array_index") != 0 ){
     if (evaluate_expr(root->left->right, symbol_table) >= root->left->left->var_pointer->size){
         error_flag = 1;
         fprintf(stderr, "Error : Index out of range!\n"); 
         
     }
-    root->left->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+    else{
+        root->left->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+    }
+}
+    else {
+        if (evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table) >= root->left->left->var_pointer->size){
+            error_flag = 1;
+            fprintf(stderr, "Error : Index out of range!\n"); 
+            
+        }
+        else{
+            root->left->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table))] = evaluate_expr(root->right, symbol_table);
+        }
    }
 //    printf("printing symbol table values\n");
 //    printsymboltable(symbol_table);
 //    printf("\n-----------------------------\n");
+}
 }
 
 void evaluate_for(Node* root, Symbol* symbol_table){
@@ -299,6 +313,15 @@ double evaluate_expr(Node* root, Symbol* symbol_table) {
             return 0;
         }
         return root->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->right,symbol_table)];
+
+    }
+    else if (strcmp(root->name, "2d_Array_exp") == 0){
+        if (root->left->var_pointer->type != TYPE_2DARRAY_INT){
+            error_flag = 1;
+            fprintf(stderr,"Not a 2d array so indexing is not possible");
+            return 0;
+        }
+        return root->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->right->left,symbol_table) * root->left->var_pointer->dim[1] + evaluate_expr(root->right->right,symbol_table)) ];
 
     }
     

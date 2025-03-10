@@ -2,7 +2,7 @@
 #define SYMBOL_TABLE_H
 #include <stdbool.h>
 #define MAXVARS 150
-typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT, TYPE_FLOAT} Type;
+typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT, TYPE_FLOAT, TYPE_2DARRAY_INT} Type;
 
 
 typedef struct Symbol{
@@ -12,11 +12,12 @@ typedef struct Symbol{
 	union{
 		int intval;
 		bool boolval;
-		int* int_arrayval;
+		int* int_arrayval; //the same thing can be used for the 2d array also --> here we can use row major formatting
 		double floatval;
 	}value; //as of now I have only considered two types integer and boolean
 	 
 	int size;
+	int dim[2]; //for 2 dimensional array (can have dimensions like for arr[3][4] dim = [3,4])
 	struct Symbol* next;
 	struct Symbol* children; //if we have an array (but is this really needed), no this is not needed 
 	 // we can us an additional data type, like int_array and then store a pointer to it.
@@ -27,8 +28,8 @@ typedef struct Symbol{
 
 
 
-Symbol* createSymbol(char* name, Type type, int size, int isfunction);
-void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction);
+Symbol* createSymbol(char* name, Type type, int size, int isfunction,int* dim);
+void insertSymbol(Symbol** root, char* name, Type type, int size,  int isfunction, int* dim);
 Symbol* lookupSymbol(Symbol* root,  char* name);
 void assign(Symbol* var, int index, double value);
 void printsymboltable(Symbol* table);

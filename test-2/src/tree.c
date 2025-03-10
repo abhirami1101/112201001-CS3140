@@ -69,6 +69,9 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
     else if (strcmp(root->name, "for-loop") == 0){
         evaluate_for(root,symbol_table);
     }
+    else if (strcmp(root->name, "do-while") == 0){
+        evaluate_dowhile(root,symbol_table);
+    }
     else if (strcmp(root->name, "break") == 0){
         break_flag = 1;
         return;
@@ -77,13 +80,13 @@ void evaluate_statement(Node* root,  Symbol* symbol_table){
         continue_flag = 1;
         return;
     }
-    printf("\n ------------------------------ \n");
-    if (error_flag != 1 ){
-    printf("--printing  symbol table values--\n");
-    printsymboltable(symbol_table);
-    printf("---------------------------------\n");
+    // printf("\n ------------------------------ \n");
+    // if (error_flag != 1 ){
+    // printf("--printing  symbol table values--\n");
+    // printsymboltable(symbol_table);
+    // printf("---------------------------------\n");
     
-    }
+    // }
     // to evaluate next statements (connected through extra)
     if (root->extra != NULL && continue_flag == 0 && break_flag == 0) {
         evaluate_statement(root->extra,symbol_table);
@@ -100,7 +103,7 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
         Node* if_node = root->left;
         Node* then_node = root->left->right;
         // printf("if-then ------ %s\n", then_node->left->name);
-        if (evaluate_expr(if_node->left, symbol_table) == 1){
+        if ((int)evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
             //  printf("if-then ------ %s\n", then_node->left->name);
         }
@@ -112,7 +115,7 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
 
         Node* then_node = root->left->right;
         Node* else_node = root->left->extra;
-        if (evaluate_expr(if_node->left, symbol_table) == 1){
+        if ((int)evaluate_expr(if_node->left, symbol_table) == 1){
             evaluate_statement(then_node->left,symbol_table);
             //  printf("condition %d\n", if_node->left->value);
             // printf("if-then-else ------ %s\n", then_node->left->name);
@@ -121,6 +124,11 @@ void evaluate_if(Node* root ,Symbol* symbol_table){
             evaluate_statement(else_node->left,symbol_table);
         }
 
+    }
+    if (error_flag != 1 ){
+        printf("--printing  symbol table values--\n");
+        printsymboltable(symbol_table);
+        printf("---------------------------------\n");
     }
 }
 
@@ -144,9 +152,16 @@ void evaluate_write(Node* root,  Symbol* symbol_table){
 			para = para->extra;
 		  }
           printf("\n");
+          if (error_flag != 1 ){
+            printf("--printing  symbol table values--\n");
+            printsymboltable(symbol_table);
+            printf("---------------------------------\n");
+        }
 }
 
 void evaluate_assign(Node* root,  Symbol* symbol_table){
+
+
    if (strcmp(root->name, "assign") == 0){
     if (root->left->var_pointer){
         // root->left->var_pointer->value.intval = root->right->value;
@@ -177,16 +192,18 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
     else {
         if (evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table) >= root->left->left->var_pointer->size){
             error_flag = 1;
-            fprintf(stderr, "Error : Index out of range!\n"); 
+            fprintf(stderr, "Error : Index out of range! ---\n"); 
             
         }
         else{
             root->left->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table))] = evaluate_expr(root->right, symbol_table);
         }
    }
-//    printf("printing symbol table values\n");
-//    printsymboltable(symbol_table);
-//    printf("\n-----------------------------\n");
+   if (error_flag != 1 ){
+    printf("--printing  symbol table values--\n");
+    printsymboltable(symbol_table);
+    printf("---------------------------------\n");
+}
 }
 }
 
@@ -232,11 +249,36 @@ void evaluate_for(Node* root, Symbol* symbol_table){
         }
     }
     break_flag = 0;
-    
+    if (error_flag != 1 ){
+        printf("--printing  symbol table values--\n");
+        printsymboltable(symbol_table);
+        printf("---------------------------------\n");
+    }
 
 }
 
+void evaluate_dowhile(Node* root,Symbol* symbol_table){
+    Node* do_stmt = root->left;
+    Node* while_exp = root->right;
+    if (do_stmt != NULL){
+        do {
+            evaluate_statement(do_stmt->left, symbol_table);
+            if (break_flag != 0){
+                break;
+            }
+            if (continue_flag != 0){
+                continue_flag = 0;
+                continue;
+            }
+        } while (evaluate_expr(while_exp->left, symbol_table));
+    }
+    if (error_flag != 1 ){
+        printf("--printing  symbol table values--\n");
+        printsymboltable(symbol_table);
+        printf("---------------------------------\n");
+    }
 
+}
 
 double evaluate_expr(Node* root, Symbol* symbol_table) {
     if (root == NULL) return 0;
@@ -301,11 +343,11 @@ double evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (root->op == 'E')
         return evaluate_expr(root->left, symbol_table) == evaluate_expr(root->right, symbol_table);
     else if (root->op == '!')
-        return !evaluate_expr(root->left, symbol_table);
+        return !(int)evaluate_expr(root->left, symbol_table);
     else if (root->op == '&')
-        return evaluate_expr(root->left, symbol_table) && evaluate_expr(root->right, symbol_table);
+        return (int)evaluate_expr(root->left, symbol_table) && (int)evaluate_expr(root->right, symbol_table);
     else if (root->op == '|')
-        return evaluate_expr(root->left, symbol_table) || evaluate_expr(root->right, symbol_table);
+        return (int)evaluate_expr(root->left, symbol_table) || (int)evaluate_expr(root->right, symbol_table);
     else if (strcmp(root->name, "Array_exp") == 0){
         if (root->left->var_pointer->type != TYPE_ARRAY_INT){
             error_flag = 1;

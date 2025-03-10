@@ -23,7 +23,7 @@ Symbol* createSymbol(char* name, Type type, int size, int isfunction, int* dim) 
     }
     else if (type == TYPE_2DARRAY_INT){
         sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
-        sym->size = size;
+        sym->size = dim[0] * dim[1];
         if (dim != NULL){
         sym->dim[0] = dim[0];
         sym->dim[1] = dim[1];

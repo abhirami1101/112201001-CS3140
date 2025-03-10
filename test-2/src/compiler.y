@@ -299,7 +299,11 @@ for_stmt :     FOR '(' assign_stmt  ';'  expr ';'  assign_stmt ')' '{' stmt_list
             };
 
 
-do_while : {};
+do_while : DO '{'stmt_list'}' WHILE '('expr')' ';' {
+    $$ = createnode(0, "do-while", 0, NULL, createnode(0,"do_statements", 0, NULL,$3,NULL,NULL), createnode(0,"while", 0, NULL,$7,NULL,NULL), NULL);
+}
+    | DO '{'stmt_list'}' WHILE '('')' ';' 
+    {$$ = createnode(0, "do-while", 0, NULL, createnode(0,"do_statements", 0, NULL,$3,NULL,NULL), createnode(0,"while", 0, NULL, NULL,NULL,NULL), NULL);};
 
 expr	:	NUM  { 
             $$ = createnode(0, "number", $1, NULL, NULL, NULL, NULL); 
@@ -350,7 +354,9 @@ expr	:	NUM  {
                 $$ = createnode('%', "mod", (int)$1->value % (int)$3->value, NULL, $1, $3, NULL);
             }
         }
-
+        |	LOGICAL_NOT expr	{ $$ = createnode('!', "not", !$2->value, NULL, $2,NULL,NULL );						}
+		|	expr LOGICAL_AND expr	{ $$ = createnode('&', "and", $1->value && $3->value, NULL, $1, $3,NULL );						}
+		|	expr LOGICAL_OR expr	{ 	$$ = createnode('|', "or", $1->value || $3->value, NULL, $1, $3,NULL );					}
 		|	expr '<' expr { 
             $$ = createnode('<', "lt", $1->value < $3->value, NULL, $1, $3, NULL);
         }
@@ -389,9 +395,6 @@ expr	:	NUM  {
                 $$ = createnode(0, "2d_Array_exp", sym->value.int_arrayval[(int)$3->value*sym->dim[1] + (int)$6->value], NULL, $1, createnode(0, "2d_array_index", 0, NULL, $3, $6, NULL), NULL);
             }
         }
-        |	LOGICAL_NOT expr	{ $$ = createnode('!', "not", !$2->value, NULL, $2,NULL,NULL );						}
-		|	expr LOGICAL_AND expr	{ $$ = createnode('&', "and", $1->value && $3->value, NULL, $1, $3,NULL );						}
-		|	expr LOGICAL_OR expr	{ 	$$ = createnode('|', "or", $1->value || $3->value, NULL, $1, $3,NULL );					}
 ;
 
 	

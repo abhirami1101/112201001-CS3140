@@ -28,5 +28,6 @@ void evaluate_assign(Node* root, Symbol* symbol_table);
 void evaluate_for(Node* root, Symbol* symbol_table);
 double evaluate_expr(Node* root, Symbol* symbol_table);
 void free_tree(Node* node);
+void evaluate_dowhile(Node* root,Symbol* symbol_table);
 
 #endif

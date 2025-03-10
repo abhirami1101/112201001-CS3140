@@ -109,6 +109,9 @@ In the assignment 3 :
       added floating point -- variables get updated accordingly
       write always gives a floating point answer
 
+      added do-while
+      added 2d array
+
 
 
 

@@ -186,7 +186,10 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
         
     }
     else{
-        root->left->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+        if ( root->left->left->var_pointer->type == TYPE_ARRAY_INT)
+            root->left->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+        else 
+        root->left->left->var_pointer->value.float_arrayval[(int)evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
     }
 }
     else {
@@ -196,8 +199,11 @@ void evaluate_assign(Node* root,  Symbol* symbol_table){
             
         }
         else{
-            root->left->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table))] = evaluate_expr(root->right, symbol_table);
-        }
+            if (root->left->left->var_pointer->type == TYPE_2DARRAY_INT)
+                root->left->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table))] = evaluate_expr(root->right, symbol_table);
+            else if (root->left->left->var_pointer->type == TYPE_2DARRAY_FLOAT)
+            root->left->left->var_pointer->value.float_arrayval[(int)(evaluate_expr(root->left->right->left, symbol_table) * root->left->left->var_pointer->dim[1] + evaluate_expr(root->left->right->right, symbol_table))] = evaluate_expr(root->right, symbol_table);
+        }   
    }
    if (error_flag != 1 ){
     printf("--printing  symbol table values--\n");
@@ -349,12 +355,15 @@ double evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (root->op == '|')
         return (int)evaluate_expr(root->left, symbol_table) || (int)evaluate_expr(root->right, symbol_table);
     else if (strcmp(root->name, "Array_exp") == 0){
-        if (root->left->var_pointer->type != TYPE_ARRAY_INT){
+        if (root->left->var_pointer->type != TYPE_ARRAY_INT || root->left->var_pointer->type != TYPE_ARRAY_FLOAT ){
             error_flag = 1;
             fprintf(stderr,"Not an array so indexing is not possible");
             return 0;
         }
-        return root->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->right,symbol_table)];
+        if (root->left->var_pointer->type != TYPE_ARRAY_FLOAT)
+            return root->left->var_pointer->value.int_arrayval[(int)evaluate_expr(root->right,symbol_table)];
+        else
+        return root->left->var_pointer->value.float_arrayval[(int)evaluate_expr(root->right,symbol_table)]; 
 
     }
     else if (strcmp(root->name, "2d_Array_exp") == 0){
@@ -363,7 +372,10 @@ double evaluate_expr(Node* root, Symbol* symbol_table) {
             fprintf(stderr,"Not a 2d array so indexing is not possible");
             return 0;
         }
-        return root->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->right->left,symbol_table) * root->left->var_pointer->dim[1] + evaluate_expr(root->right->right,symbol_table)) ];
+        if (root->left->var_pointer->type != TYPE_2DARRAY_FLOAT)
+            return root->left->var_pointer->value.int_arrayval[(int)(evaluate_expr(root->right->left,symbol_table) * root->left->var_pointer->dim[1] + evaluate_expr(root->right->right,symbol_table)) ];
+        else
+        return root->left->var_pointer->value.float_arrayval[(int)(evaluate_expr(root->right->left,symbol_table) * root->left->var_pointer->dim[1] + evaluate_expr(root->right->right,symbol_table)) ]; 
 
     }
     

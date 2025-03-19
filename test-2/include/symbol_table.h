@@ -2,7 +2,7 @@
 #define SYMBOL_TABLE_H
 #include <stdbool.h>
 #define MAXVARS 150
-typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT, TYPE_FLOAT, TYPE_2DARRAY_INT} Type;
+typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT, TYPE_FLOAT, TYPE_2DARRAY_INT, TYPE_ARRAY_FLOAT, TYPE_2DARRAY_FLOAT} Type;
 
 
 typedef struct Symbol{
@@ -14,6 +14,7 @@ typedef struct Symbol{
 		bool boolval;
 		int* int_arrayval; //the same thing can be used for the 2d array also --> here we can use row major formatting
 		double floatval;
+		double* float_arrayval;
 	}value; //as of now I have only considered two types integer and boolean
 	 
 	int size;

@@ -120,6 +120,7 @@ else if (strcmp($1->name, "float") == 0) t = TYPE_FLOAT;
 			while(p != NULL ){
                 if (strcmp(p->name,"Array")!=0 && strcmp(p->name, "2D_Array") != 0)
 				    p->var_pointer->type = t;
+                
 				p=p->extra;
 			}
 			$$= createnode(0, "decl", 0, NULL, $1, $2, NULL);}

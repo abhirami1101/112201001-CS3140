@@ -21,8 +21,20 @@ Symbol* createSymbol(char* name, Type type, int size, int isfunction, int* dim) 
         sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
         sym->size = size;
     }
+    else if (type == TYPE_ARRAY_FLOAT){
+        sym->value.float_arrayval = (double*) malloc(sizeof(double) * size);
+        sym->size = size;
+    }
     else if (type == TYPE_2DARRAY_INT){
         sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
+        sym->size = dim[0] * dim[1];
+        if (dim != NULL){
+        sym->dim[0] = dim[0];
+        sym->dim[1] = dim[1];
+        }
+    }
+    else if (type == TYPE_2DARRAY_FLOAT){
+        sym->value.float_arrayval = (double*) malloc(sizeof(double) * size);
         sym->size = dim[0] * dim[1];
         if (dim != NULL){
         sym->dim[0] = dim[0];
@@ -107,12 +119,29 @@ void printsymboltable(Symbol* table){
             }
             printf("]\n");
         }
+        else if (table->type == TYPE_ARRAY_FLOAT){
+            printf("%s = [", table->varname);
+            for (int i = 0; i < table->size; i++){
+                printf("%f, ",table->value.float_arrayval[i]);
+            }
+            printf("]\n");
+        }
         else if (table->type == TYPE_2DARRAY_INT){
             printf("%s = [", table->varname);
             for (int i = 0; i < table->dim[0]; i++){
                 printf("[");
                 for (int j = 0; j < table->dim[1]; j++)
                     printf("%d, ",table->value.int_arrayval[i * table->dim[1] + j]);
+                printf("],");
+            }
+            printf("]\n");
+        }
+        else if (table->type == TYPE_2DARRAY_FLOAT){
+            printf("%s = [", table->varname);
+            for (int i = 0; i < table->dim[0]; i++){
+                printf("[");
+                for (int j = 0; j < table->dim[1]; j++)
+                    printf("%f, ",table->value.float_arrayval[i * table->dim[1] + j]);
                 printf("],");
             }
             printf("]\n");

@@ -2,7 +2,7 @@
 #define SYMBOL_TABLE_H
 #include <stdbool.h>
 #define MAXVARS 150
-typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT} Type;
+typedef enum{TYPE_INT, TYPE_BOOL, TYPE_ARRAY_INT, TYPE_ARRAY_BOOL} Type;
 
 
 typedef struct Symbol{
@@ -13,6 +13,7 @@ typedef struct Symbol{
 		int intval;
 		bool boolval;
 		int* int_arrayval;
+		bool* bool_arrayval;
 	}value; //as of now I have only considered two types integer and boolean
 	 
 	int size;

@@ -112,9 +112,16 @@ Gdecl_list:	/* NULL  */ {$$ = NULL;}
 
 Gdecl	:	type Gid_list ';' {Type t = (strcmp($1->name,"integer") == 0)?TYPE_INT : TYPE_BOOL;
 			Node* p = $2;
+            printf( "arrayyy boolean %s %d\n", p->name, t);
 			while(p != NULL ){
                 if (strcmp(p->name,"Array")!=0)
-				    p->var_pointer->type = t;
+                {printf("hey");
+				    p->var_pointer->type = t;}
+                else if (strcmp(p->name,"Array")==0 && t == TYPE_BOOL) {
+                    printf( "arrayyy boolean\n");
+                    p->right->var_pointer->type = TYPE_ARRAY_BOOL;
+                }
+
 				p=p->extra;
 			}
 			$$= createnode(0, "decl", 0, NULL, $1, $2, NULL);}
@@ -199,7 +206,6 @@ statement:	assign_stmt  ';'		{
 		;
 assign_stmt: var_expr '=' expr { 
     $$ = createnode('=', "assign", 0, NULL, $1, $3, NULL);
-
     
     // if ($1->var_pointer) {  
     //     $1->var_pointer->value.intval = $3->value;  
@@ -283,6 +289,11 @@ expr	:	NUM  {
         }
 		|	var_expr {  
             Symbol* sym = $1->var_pointer; 
+             if (sym->type == TYPE_ARRAY_INT || sym->type == TYPE_ARRAY_BOOL)
+        {yyerror("Error: NO index given for the array");
+        return 0;
+
+        }
             $$ = createnode(0, "var_expr", sym ? sym->value.intval : 0, NULL, $1, NULL, NULL); 
         }
 		|	T { 

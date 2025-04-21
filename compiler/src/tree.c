@@ -44,7 +44,7 @@ void printroot(Node* node, int depth) {
         printf("|-- (op: %c)", node->op);
     }
     if (node->var_pointer) {
-        printf(" [Var: %s, %u]", node->var_pointer->varname, node->var_pointer->type);
+        printf(" [Var: %s]", node->var_pointer->varname);
     }
     printf("\n");
     printroot(node->left, depth + 1);
@@ -138,51 +138,33 @@ void evaluate_write(Node* root,  Symbol* symbol_table){
           printf("\n");
 }
 
-void evaluate_assign(Node* root, Symbol* symbol_table) {
-    if (strcmp(root->name, "assign") == 0) {
-        if (root->left == NULL || root->left->var_pointer == NULL) {
-            error_flag = 1;
-            fprintf(stderr, "Error: Assignment to an undefined variable!\n");
-            return;
-        }
-
-        if (root->left->var_pointer->type == TYPE_INT) {
-            root->left->var_pointer->value.intval = evaluate_expr(root->right, symbol_table);
-        } else if (root->left->var_pointer->type == TYPE_BOOL) {
-            root->left->var_pointer->value.boolval = (bool)evaluate_expr(root->right, symbol_table);
-        }
-    } 
-    else if (strcmp(root->name, "assign_array") == 0) {
-        if (root->left->left == NULL || root->left->left->var_pointer == NULL) {
-            error_flag = 1;
-            fprintf(stderr, "Error: Assignment to an undefined array!\n");
-            return;
-        }
-
-        if (root->left->right == NULL) {
-            error_flag = 1;
-            fprintf(stderr, "Error: No index specified for the array!\n");
-            return;
-        }
-
-        int index = evaluate_expr(root->left->right, symbol_table);
-        if (index < 0 || index >= root->left->left->var_pointer->size) {
-            error_flag = 1;
-            fprintf(stderr, "Error: Index out of range!\n");
-            return;
-        }
-
-        if (root->left->left->var_pointer->type == TYPE_ARRAY_INT) {
-            root->left->left->var_pointer->value.int_arrayval[index] = evaluate_expr(root->right, symbol_table);
-        } else if (root->left->left->var_pointer->type == TYPE_ARRAY_BOOL) {
-            root->left->left->var_pointer->value.bool_arrayval[index] = evaluate_expr(root->right, symbol_table);
-        } else {
-            error_flag = 1;
-            fprintf(stderr, "Error: Mismatched array type in assignment!\n");
-        }
+void evaluate_assign(Node* root,  Symbol* symbol_table){
+   if (strcmp(root->name, "assign") == 0){
+    if (root->left->var_pointer){
+        // root->left->var_pointer->value.intval = root->right->value;
+        root->left->var_pointer->value.intval = evaluate_expr(root->right, symbol_table);
+        
     }
-}
+    else{
+        error_flag = 1;
+       fprintf(stderr, "Error: Assignment to an undefined variable!\n"); 
 
+    }
+   }
+   else if (strcmp(root->name, "assign_array") == 0){
+    // root->left->left->var_pointer->value.int_arrayval[root->left->right->value] = root->right->value;
+    // printf("array  %d\n", evaluate_expr(root->left->right, symbol_table));
+    if (evaluate_expr(root->left->right, symbol_table) >= root->left->left->var_pointer->size){
+        error_flag = 1;
+        fprintf(stderr, "Error : Index out of range!\n"); 
+        
+    }
+    root->left->left->var_pointer->value.int_arrayval[evaluate_expr(root->left->right, symbol_table)] = evaluate_expr(root->right, symbol_table);
+   }
+//    printf("printing symbol table values\n");
+//    printsymboltable(symbol_table);
+//    printf("\n-----------------------------\n");
+}
 
 void evaluate_for(Node* root, Symbol* symbol_table){
     Node* conditions = root->left;
@@ -241,10 +223,7 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (strcmp(root->name, "var_expr") == 0) {
         if (root->left->var_pointer) { 
             // printf("%s == %d\n", root->left->var_pointer->varname, root->left->var_pointer->value.intval);
-            if (root->left->var_pointer->type == TYPE_INT)
-                return root->left->var_pointer->value.intval;
-            else if (root->left->var_pointer->type == TYPE_BOOL)
-            return root->left->var_pointer->value.boolval;
+            return root->left->var_pointer->value.intval;
         } else {
             error_flag = 1;
             fprintf(stderr, "Error: Undefined variable!\n");
@@ -283,8 +262,7 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (root->op == '<')
         return evaluate_expr(root->left, symbol_table) < evaluate_expr(root->right, symbol_table);
     else if (root->op == '>')
-       { printf( " boolean valuess    %d\n",evaluate_expr(root->left, symbol_table) > evaluate_expr(root->right, symbol_table));
-        return evaluate_expr(root->left, symbol_table) > evaluate_expr(root->right, symbol_table);}
+        return evaluate_expr(root->left, symbol_table) > evaluate_expr(root->right, symbol_table);
     else if (root->op == 'G')
         return evaluate_expr(root->left, symbol_table) >= evaluate_expr(root->right, symbol_table);
     else if (root->op == 'L')
@@ -300,15 +278,12 @@ int evaluate_expr(Node* root, Symbol* symbol_table) {
     else if (root->op == '|')
         return evaluate_expr(root->left, symbol_table) || evaluate_expr(root->right, symbol_table);
     else if (strcmp(root->name, "Array_exp") == 0){
-        if (root->left->var_pointer->type != TYPE_ARRAY_INT || root->left->var_pointer->type != TYPE_ARRAY_BOOL){
+        if (root->left->var_pointer->type != TYPE_ARRAY_INT){
             error_flag = 1;
             fprintf(stderr,"Not an array so indexing is not possible");
             return 0;
         }
-        if (root->left->var_pointer->type != TYPE_ARRAY_INT)
-            return root->left->var_pointer->value.int_arrayval[evaluate_expr(root->right,symbol_table)];
-        if (root->left->var_pointer->type != TYPE_ARRAY_BOOL)
-            return (bool)root->left->var_pointer->value.bool_arrayval[evaluate_expr(root->right,symbol_table)];
+        return root->left->var_pointer->value.int_arrayval[evaluate_expr(root->right,symbol_table)];
 
     }
     

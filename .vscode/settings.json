@@ -1,6 +1,7 @@
 {
 	"files.associations": {
 		"Makefile": "makefile",
-		"symbol_table.h": "c"
+		"symbol_table.h": "c",
+		"stdbool.h": "c"
 	}
 }

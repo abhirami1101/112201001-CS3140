@@ -21,10 +21,6 @@ Symbol* createSymbol(char* name, Type type, int size, int isfunction) {
         sym->value.int_arrayval = (int*) malloc(sizeof(int) * size);
         sym->size = size;
     }
-    else if (type == TYPE_ARRAY_BOOL){
-        sym->value.bool_arrayval = (bool*) malloc(sizeof(bool) * size);
-        sym->size = size;
-    }
     
 
     sym->next = NULL;
@@ -83,31 +79,18 @@ void assign(Symbol* var, int index,  int value){
 		var->value.boolval = value;
     if (var->type == TYPE_ARRAY_INT)
         var->value.int_arrayval[index] = value;
-    if (var->type == TYPE_ARRAY_BOOL)
-        var->value.bool_arrayval[index] = value;
 
 }
 
 void printsymboltable(Symbol* table){
     if (table != NULL){
 
-        if (table->is_function == 0 && table->size == 0){
-            if (table->type == TYPE_INT)
-                printf("%s = %d\n", table->varname, table->value.intval);
-            else if (table->type == TYPE_BOOL)
-            printf("%s = %d\n", table->varname, table->value.boolval);
-        }
-        else if (table->type == TYPE_ARRAY_INT){
+        if (table->is_function == 0 && table->size == 0)
+            printf("%s = %d\n", table->varname, table->value.intval);
+        else{
             printf("%s = [", table->varname);
             for (int i = 0; i < table->size; i++){
                 printf("%d, ",table->value.int_arrayval[i]);
-            }
-            printf("]\n");
-        }
-        else if (table->type == TYPE_ARRAY_BOOL){
-            printf("%s = [", table->varname);
-            for (int i = 0; i < table->size; i++){
-                printf("%d, ",table->value.bool_arrayval[i]);
             }
             printf("]\n");
         }

@@ -5,6 +5,9 @@ int yylex();
 #include "include/tree.h"
 #include "include/symbol_table.h"
 #include <string.h>
+#include "include/codegen.h"
+// #include <file.h>
+extern FILE *yyin;
  Symbol* symbol_table;
  Node* root;
 void yyerror(const char *s);
@@ -38,8 +41,8 @@ this can be used incase of printing all the outputs of print together
 %token WHILE DO ENDWHILE FOR 
 %token T F 
 %token MAIN RETURN
-%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt for_stmt
-%type <node> stmt_list statement assign_stmt var_expr expr write_stmt para_list para_list1 para
+%type <node> Gdecl_sec  Gdecl Gdecl_list Gid_list type Gid array_expr cond_stmt for_stmt read_stmt
+%type <node> stmt_list statement assign_stmt var_expr expr write_stmt para_list para_list1 para read_arglist read_arg
 
 
 
@@ -191,6 +194,7 @@ statement:	assign_stmt  ';'		{
 		| write_stmt ';' { $$ = $1;
         // evaluate_statement($$);
         }
+        | read_stmt ';' {$$ = $1;}
         | cond_stmt {$$ = $1;
         // evaluate_statement($$);
         }
@@ -216,6 +220,20 @@ assign_stmt: var_expr '=' expr {
 write_stmt : WRITE '(' para_list ')' { 
     $$ = createnode(0, "write", 0, NULL,$3, NULL, NULL);
 };
+
+read_stmt : READ '(' read_arglist ')'{
+    $$ = createnode(0, "read", 0, NULL,$3, NULL, NULL);
+};
+
+read_arglist : /* null */ { $$ = NULL;}
+            | read_arg {$$ = $1;};
+
+read_arg : var_expr { $$ = $1; }
+        | var_expr ',' read_arg {
+            $$ = $1; 
+                $1->extra = $3; 
+        };
+
 
 para_list : /* null */ { $$ = NULL; }
           | para_list1 { $$ = $1; 
@@ -388,10 +406,22 @@ void yyerror ( const char  *s) {
    fprintf (stderr, "%s\n", s);
  }
 
-int main(){
-yyparse();
-free_tree(root);
-free_symbol_table(symbol_table);
+int main(int argc, char *argv[]){
+     if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return 1; 
+    }
+    yyin = fopen(argv[1], "r");
+    //   yyin = fopen(argv[1], "r");
+    if (!yyin) {
+        yyerror("couldnt open the file");
+        return 1; 
+    }
+    yyparse();
+    fclose(yyin);
+    genMIPS(argv[1], root, symbol_table);
+    free_tree(root);
+    free_symbol_table(symbol_table);
 }
 
 

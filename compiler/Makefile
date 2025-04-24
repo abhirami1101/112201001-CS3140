@@ -4,7 +4,7 @@ CFLAGS = -lm
 YACCFILE = src/compiler.y
 LEXFILE = src/compiler.l
 OUTPUTFILE = bin/compiler
-SYMBOL_TABLE = src/symbol_table.c
+SYMBOL_TABLE = src/symbol_table.c src/codegen.c
 TREE = src/tree.c
 BIN = bin
 

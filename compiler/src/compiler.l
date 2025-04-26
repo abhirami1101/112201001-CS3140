@@ -26,12 +26,26 @@ int     wflag;
 %}
 
 %option noyywrap
+
+%x COMMENT  
 digit	[0-9]
 letter	[a-zA-Z]
 
 
 
 %%
+
+"//".*          { /* ignore single-line comment */ }
+
+"/*"              { BEGIN(COMMENT); /*to enter the comment state*/ }
+
+<COMMENT>"*/"     { BEGIN(INITIAL); /* to leave COMMENT state */ }
+<COMMENT>\n       { yylineno++; }
+<COMMENT>.        { 
+	//ignore whats inside the comment
+}
+
+
 "main"	                 	{	return MAIN;				}	
 					
 "return" 			{ return RETURN;
@@ -77,6 +91,7 @@ letter	[a-zA-Z]
 "continue"				{ return CONTINUE;
 
 }
+"++"	{return ADD;}
 
 "=="				{
 	return EQUALEQUAL;

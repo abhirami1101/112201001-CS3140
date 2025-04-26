@@ -9,7 +9,7 @@
 
 
 static FILE *outfile;
-static int registers[32];
+static int registers[32]; // to keep track of registers, if occuppied : 1 else 0
 char* file_name;
 static int label_count = 0;
 static int temp_reg_num = 8;
@@ -17,6 +17,7 @@ static bool free2 = true;
 static bool free3 = true;
 static int rw_lc = 0;
 #define MAX_TEMP_REGS 8 // $t0 to $t7
+char* break_label;
 
 int get_arg_reg(){
 	int i = 4;
@@ -69,6 +70,16 @@ void reset_regs() {
    for (int i = 0; i < 32; i++){
 	registers[i] = 0;
    }
+}
+
+void reset_temp_regs(){
+	int i = 8;
+	while (i <= 15){
+		registers[i] = 0;
+		i++;
+	}
+	registers[24] = 0;
+	registers[25]=0;
 }
 
 // const char* get_temp_reg() {
@@ -191,10 +202,10 @@ void gen_statement(Node* root, Symbol* symbol_table){
 	// printf("read resched and root is %s\n", root->name);
 
     if (strcmp(root->name, "if-then") == 0) {
-        // gen_if_then(root,symbol_table);
+        gen_if_then(root,symbol_table);
     } 
 	if (strcmp(root->name, "if-then-else") == 0){
-		// gen_if_then_else(root,symbol_table);
+		gen_if_then_else(root,symbol_table);
 	}
     else if (strcmp(root->name, "write") == 0) {
        gen_write(root,symbol_table);
@@ -206,8 +217,12 @@ void gen_statement(Node* root, Symbol* symbol_table){
         gen_assign(root,symbol_table);
     }
     else if (strcmp(root->name, "for-loop") == 0){
-        // gen_for(root,symbol_table);
+        gen_for(root,symbol_table);
     }
+	else if (strcmp(root->name, "break") == 0){
+		break_label = generate_label();
+		fprintf(outfile,"\tj\t%s\n",break_label);
+	}
 	// printf("read resched and root is %s\n", root->extra->name);
     // to evaluate next statements (connected through extra)
 }
@@ -222,13 +237,165 @@ void gen_statement_list(Node* root, Symbol* symbol_table){
 
 }
 
+// $$ = createnode(0, "for-loop", 0, NULL, createnode(0, "for_conditions", 0, NULL, $3, // initializer assign
+// createnode(0, "final-condition", 0, NULL, $5, NULL, NULL), // contains condition expr
+// createnode(0, "step", 0, NULL, $7, NULL, NULL)), // contains step assign
+// createnode(0, "in-loop", 0, NULL, $10, NULL, NULL), NULL); // contains loop body stmts
+// this is how, for loop node is initialised
+
+void gen_for(Node* root, Symbol* symbol_table){
+    Node* initial_assign = root->left->left;        // assignment node for initialization
+    Node* condition_node = root->left->right;       // final-condition node
+    Node* step_node      = root->left->extra;        // step node
+    Node* in_loop_node   = root->right;            // in-loop node
+
+    Node* condition_expr  = (condition_node) ? condition_node->left : NULL;
+    Node* step_assign     = (step_node) ? step_node->left : NULL;
+    Node* loop_body_stmts = (in_loop_node) ? in_loop_node->left : NULL;
+
+
+    char* loop_start_label = generate_label();
+    char* condition_check_label = generate_label();
+    char* loop_end_label = generate_label();
+
+    if (initial_assign != NULL) {
+        gen_assign(initial_assign, symbol_table);
+        // reset_temp_regs(); 
+    }
+
+    fprintf(outfile, "\tb\t%s\n", condition_check_label);
+    fprintf(outfile, "\t#nop\n"); 
+
+
+    fprintf(outfile, "%s:\n", loop_start_label);
+
+    if (loop_body_stmts != NULL) {
+        gen_statement_list(loop_body_stmts, symbol_table);
+        // reset_temp_regs();
+    } 
+
+    if (step_assign != NULL) {
+        gen_assign(step_assign, symbol_table);
+        // reset_temp_regs();
+    }
+
+    fprintf(outfile, "%s:\n", condition_check_label);
+    int cond_result = -1;
+    if (condition_expr != NULL) {
+        cond_result = gen_expr(condition_expr, symbol_table);
+    } 
+
+    if (cond_result != -1) {
+        fprintf(outfile, "\tbne\t$%d, $0, %s\n", cond_result, loop_start_label);
+        fprintf(outfile, "\t#nop\n");
+        registers[cond_result] = 0;
+    } else if (condition_expr == NULL) {
+        fprintf(outfile, "\tb\t%s\n", loop_start_label);
+        fprintf(outfile, "\t#nop\n");
+    }
+	if (break_label)
+		fprintf(outfile,"%s:\n",break_label);
+    reset_regs();
+}
+// createnode(0,"if-then", 0, NULL,  createnode(0,"if", 0, NULL, $2,
+// 	createnode(0,"then", 0, NULL, $4,NULL,NULL),NULL), NULL, NULL); 
+
+void gen_if_then(Node* root, Symbol* symbol_table){
+	Node* condition = root->left; // if node
+	Node* then = root->left->right; // then node
+
+	int if_reg = gen_expr(condition->left,symbol_table); 
+	// contains value of the condition
+
+	char* then_label = generate_label();
+	char* out_label = generate_label();
+
+	fprintf(outfile, "\tbeq\t$%d,$0,%s\n",if_reg,out_label);
+	fprintf(outfile, "%s:\n",then_label);
+	gen_statement_list(then->left,symbol_table);
+	fprintf(outfile, "%s:\n",out_label);
+
+}
+
+// createnode(0,"if-then-else", 0, NULL,  createnode(0,"if", 0, NULL, $2,
+// createnode(0,"then", 0, NULL, $4,NULL,NULL),createnode(0,"else", 0, NULL, $6,NULL,NULL)), NULL, NULL);  
+
+void gen_if_then_else(Node* root, Symbol* symbol_table){
+	Node* condition = root->left; // if node
+	Node* then = root->left->right; // then node
+	Node* else_node = root->left->extra;
+
+	int if_reg = gen_expr(condition->left,symbol_table); 
+	// contains value of the condition
+
+	char* then_label = generate_label();
+	char* else_label = generate_label();
+	char* out_label = generate_label();
+
+	fprintf(outfile, "\tbeq\t$%d,$0,%s\n",if_reg,else_label);
+	fprintf(outfile, "%s:\n",then_label);
+	gen_statement_list(then->left,symbol_table);
+	fprintf(outfile, "\tj\t%s\n",out_label);
+	fprintf(outfile, "%s:\n",else_label);
+	gen_statement_list(else_node->left,symbol_table);
+	fprintf(outfile, "%s:\n",out_label);
+
+}
+
 void gen_assign(Node* root, Symbol* symbol_table){
-	
+	// int lhs = gen_expr(root->left,symbol_table);
+	if (strcmp(root->name, "assign") == 0){
+		int lhs = get_sub_reg();
+		if (lhs == -1){
+			lhs = get_temp_reg();
+		}
+		fprintf(outfile, "\tla\t$%d, %s\t\n", lhs, root->left->name);
+		registers[lhs] = 1;
+		int rhs = gen_expr(root->right,symbol_table);
+		registers[rhs] = 1;
+		fprintf(outfile, "\tsw\t$%d, 0($%d)\t\n", rhs, lhs);
+		fprintf(outfile,"\t#nop\n");
+	}
+	if (strcmp(root->name, "assign_array") == 0){
+		int lhs = get_sub_reg();
+		if (lhs == -1){
+			lhs = get_temp_reg();
+		}
+		fprintf(outfile, "\tla\t$%d, %s\t\n", lhs, root->left->left->name);
+		registers[lhs] = 1;
+		int rhs = gen_expr(root->right,symbol_table);
+		registers[rhs] = 1;
+		int index_reg;
+		int final_pos;
+		// if (strcmp(root->left->right->name,"number") != 0){
+			index_reg = gen_expr(root->left, symbol_table);
+			final_pos = get_sub_reg();
+			if (final_pos == -1){
+				final_pos = get_temp_reg();
+			}
+			fprintf(outfile, "\tsll\t$%d,$%d,2\t\n", final_pos,index_reg);
+			fprintf(outfile, "\taddu\t$%d,$%d,$%d\t\n", lhs,final_pos,lhs);
+			fprintf(outfile, "\tsw\t$%d, 0($%d)\t\n", rhs, lhs);
+			registers[index_reg]= 0;
+		// }
+		// else{
+		// fprintf(outfile, "\tsw\t$%d, %d($%d)\t\n", rhs,4*(root->left->right->value), lhs);}
+		fprintf(outfile,"\t#nop\n");
+	}
 }
 
 int gen_expr(Node* root, Symbol* symbol_table){
 	printf("to generate expression : %s\n",root->name);
 	int result_reg;
+	if (strcmp(root->name,"number")== 0){
+		result_reg = get_sub_reg();
+		if (result_reg == -1){
+			result_reg = get_temp_reg();
+		}
+		registers[result_reg] = 1;
+		fprintf(outfile, "\tli\t$%d, %d\t\n", result_reg, root->value);
+		return result_reg;
+	}
 	if (strcmp(root->name,"var_expr")== 0){
 		int addr_reg = get_sub_reg();
 		if (addr_reg == -1){
@@ -242,6 +409,33 @@ int gen_expr(Node* root, Symbol* symbol_table){
 		registers[result_reg] = 1;
 		fprintf(outfile, "\tla\t$%d, %s\t\n", addr_reg, root->left->var_pointer->varname);
         fprintf(outfile, "\tlw\t$%d, 0($%d)\n", result_reg, addr_reg);
+		registers[addr_reg] = 0;
+		fprintf(outfile,"\t#nop\n");
+		return result_reg;
+	}
+	if(strcmp(root->name,"Array_exp")== 0){
+		int addr_reg = get_sub_reg();
+		if (addr_reg == -1){
+			addr_reg = get_temp_reg();
+		}
+		registers[addr_reg] = 1;
+		result_reg = get_sub_reg();
+		if (result_reg == -1){
+			result_reg = get_temp_reg();
+		}
+		registers[result_reg] = 1;
+		fprintf(outfile, "\tla\t$%d, %s\t\n", addr_reg, root->left->var_pointer->varname);
+		int index_reg;
+		int final_pos;
+
+		index_reg = gen_expr(root->right, symbol_table);
+		final_pos = get_sub_reg();
+		if (final_pos == -1){
+			final_pos = get_temp_reg();
+		}
+		fprintf(outfile, "\tsll\t$%d,$%d,2\t\n", final_pos,index_reg);
+		fprintf(outfile, "\taddu\t$%d,$%d,$%d\t\n", addr_reg,final_pos,addr_reg);
+		fprintf(outfile, "\tlw\t$%d, %d($%d)\n", result_reg,0, addr_reg);
 		registers[addr_reg] = 0;
 		fprintf(outfile,"\t#nop\n");
 		return result_reg;
@@ -338,6 +532,105 @@ int gen_expr(Node* root, Symbol* symbol_table){
 		// fprintf(outfile, "\tbne\t$%d,$0,1f\n",result2);
 
 	}
+	if (strcmp(root->name,"or")== 0){
+		int result1 = gen_expr(root->left, symbol_table);
+		char* true_lc = generate_label();
+		char* false_lc = generate_label();
+		fprintf(outfile, "\tbne\t$%d,$0,$%s\n",result1,true_lc);
+		registers[result1] = 0;
+		// fprintf(outfile, "\tli\t$%d,1\n",result1);
+		// fprintf(outfile, "\tbeq\t$%d,$0,%s\n",result1,lc);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile, "\tbeq\t$%d,$0,$%s\n",result2,false_lc);
+		registers[result2] = 0;
+		result_reg = get_sub_reg();
+		if (result_reg==-1){
+			result_reg = get_temp_reg();
+		}
+		registers[result_reg] = 1;
+		
+		// char* false_lc = 
+		char* nextlc = generate_label();
+		fprintf(outfile,"$%s:\n",true_lc);
+		fprintf(outfile, "\tli\t$%d,1\n",result_reg);
+		fprintf(outfile,"\tb\t$%s\n",nextlc);
+		// char* nextlc = generate_label();
+		// fprintf(outfile, "\tb\t$%s\n",nextlc);
+		fprintf(outfile,"$%s:\n",false_lc);
+		fprintf(outfile,"\tmove\t$%d,$0\n",result_reg);
+		fprintf(outfile,"$%s:\n",nextlc);
+		return result_reg;
+		// if (result_reg == -1){
+		// 	result_reg = get_temp_reg();
+		// }
+		// registers[result_reg] = 1;
+		// fprintf(outfile, "\tbne\t$%d,$0,1f\n",result2);
+
+	}
+	if (strcmp(root->name,"not")== 0){
+		int result1 = gen_expr(root->left, symbol_table);
+		// result_reg = get_sub_reg();
+		// if (result_reg==-1){
+		// 	result_reg = get_temp_reg();
+		// }
+		// registers[result_reg] = 1;
+		fprintf(outfile,"\tsltu\t$%d,$%d,1\n",result1,result1);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result1,result1);
+		// registers[result1] = 0;
+		return result1;
+	}
+	if (strcmp(root->name,"lt")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\tslt\t$%d,$%d,$%d\n",result2,result1,result2);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result2,result2);
+		registers[result1] = 0;
+		return result2;
+	}
+	if (strcmp(root->name,"gt")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\tslt\t$%d,$%d,$%d\n",result1,result2,result1);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result1,result1);
+		registers[result2] = 0;
+		return result1;
+	}
+	if (strcmp(root->name,"lte")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\tslt\t$%d,$%d,$%d\n",result2,result2,result1);
+		fprintf(outfile,"\txori\t$%d,$%d,0x1\n",result2,result2);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result2,result2);
+		registers[result1] = 0;
+		return result2;
+	}
+	if (strcmp(root->name,"gte")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\tslt\t$%d,$%d,$%d\n",result2,result1,result2);
+		fprintf(outfile,"\txori\t$%d,$%d,0x1\n",result2,result2);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result2,result2);
+		registers[result1] = 0;
+		return result2;
+	}
+	if (strcmp(root->name,"eq")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\txor\t$%d,$%d,$%d\n",result2,result1,result2);
+		fprintf(outfile,"\tsltu\t$%d,$%d,1\n",result2,result2);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result2,result2);
+		registers[result1] = 0;
+		return result2;
+	}
+	if (strcmp(root->name,"neq")==0){
+		int result1 = gen_expr(root->left, symbol_table);
+		int result2 = gen_expr(root->right, symbol_table);
+		fprintf(outfile,"\txor\t$%d,$%d,$%d\n",result2,result1,result2);
+		fprintf(outfile,"\tsltu\t$%d,$0,$%d\n",result2,result2);
+		fprintf(outfile,"\tandi\t$%d,$%d,0x00f\n",result2,result2);
+		registers[result1] = 0;
+		return result2;
+	}
 }
 // void gen_read(Node* root, Symbol* symbol_table){
 // 	int label_no = root->value;
@@ -381,9 +674,35 @@ void gen_read(Node* root, Symbol* symbol_table){
         char line[128];
 		int arg_reg = get_arg_reg();
 		registers[arg_reg] = 1;
-        snprintf(line, sizeof(line),
-                 "\tla\t$%d,%s\n", arg_reg, var->name);
+		if (strcmp(var->name,"Array_exp")==0){
+			int reg = get_sub_reg();
+			if (reg == -1){
+				reg = get_temp_reg();
+			}
+			registers[reg] = 1;
+			if (strcmp(var->right->name,"number") == 0){
+				snprintf(line, sizeof(line),
+				"\tla\t$%d,%s\n\taddiu\t$%d,$%d,%d\n", reg, var->left->name,
+				arg_reg,reg,4*var->right->value);}
+			else{
+				printf("variable inex type is : %s\n",var->right->name);
+				int index_reg = gen_expr(var->right,symbol_table);
+				int addr_reg = get_sub_reg();
+				if (addr_reg == -1){
+					addr_reg = get_temp_reg();
+				}
+
+				snprintf(line, sizeof(line),
+				"\tsll\t$%d,$%d,2\n\tla\t$%d,%s\n\taddu\t$%d,$%d,$%d\n\tmove\t$%d,$%d\n",addr_reg,index_reg,reg,var->left->name,reg,addr_reg,reg,arg_reg,reg);
+			}
+			// printf("reading the pos : %d\n",4*var->right->value);
+		}
+		else{
+			snprintf(line, sizeof(line),
+					"\tla\t$%d,%s\n", arg_reg, var->name);
+		}
         strncat(tempo, line, sizeof(tempo) - strlen(tempo) - 1);
+		
         var = var->extra;
     }
     strncat(tempo, label_load, sizeof(tempo) - strlen(tempo) - 1);
@@ -451,12 +770,12 @@ void generate_data_section_entries(Node* node, Symbol* symbol_table) {
             }
         }
 
-        strcat(format_string, "\\000");
+        strcat(format_string, "\\n");
 
         int current_label_num = rw_lc++;
 		fprintf(outfile, "\t.align 2\n");
         fprintf(outfile, "$LC%d:\n", current_label_num);
-        fprintf(outfile, "\t.ascii \"%s\"\n", format_string);
+        fprintf(outfile, "\t.asciiz \"%s\"\n", format_string);
         // fprintf(outfile, "    .align 2\n");
 
         node->value = current_label_num;

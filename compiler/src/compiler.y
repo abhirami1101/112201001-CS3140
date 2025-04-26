@@ -28,8 +28,8 @@ this can be used incase of printing all the outputs of print together
 	struct Node* node;
 }
 
-%token BEG END
-%token T_INT T_BOOL
+%token BEG END ADD
+%token T_INT T_BOOL 
 %token READ WRITE
 %token BEGDECL ENDDECL DECL
 %token BREAK CONTINUE
@@ -48,7 +48,8 @@ this can be used incase of printing all the outputs of print together
 
 %left '<' '>'
 %left EQUALEQUAL LESSTHANOREQUAL GREATERTHANOREQUAL NOTEQUAL
-%left '+' '-'
+
+%left '+' '-' ADD
 %left '*' '/'
 %left '%'
 %left LOGICAL_AND LOGICAL_OR
@@ -215,6 +216,12 @@ assign_stmt: var_expr '=' expr {
             $$ = createnode('=', "assign_array", 0, NULL, $1, $3, NULL); 
     //    $1->left->var_pointer->value.int_arrayval[$1->right->value] = $3->value;  
     } 
+    | var_expr ADD {
+        $$ = createnode('=', "assign", 0, NULL, $1, createnode(0,"number",1,NULL,NULL,NULL,NULL), NULL);
+    }
+    | array_expr ADD{
+        $$ = createnode('=', "assign_array", 0, NULL, $1, createnode(0,"number",1,NULL,NULL,NULL,NULL), NULL);
+    }
 
 
 write_stmt : WRITE '(' para_list ')' { 
@@ -229,6 +236,11 @@ read_arglist : /* null */ { $$ = NULL;}
             | read_arg {$$ = $1;};
 
 read_arg : var_expr { $$ = $1; }
+        | array_expr {$$ = $1;}
+        | array_expr ',' read_arg{
+            $$ = $1; 
+                $1->extra = $3; 
+        }
         | var_expr ',' read_arg {
             $$ = $1; 
                 $1->extra = $3; 

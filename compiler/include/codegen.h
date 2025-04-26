@@ -7,11 +7,12 @@
 
 // Node* createnode(char op, char* name,int value, Symbol* var, Node* left, Node* right, Node* extra);
 void genMIPS (const char* filename,Node* root, Symbol* symbol_table);
-// void gen_if_then(Node* root, Symbol* symbol_table);
+void gen_if_then(Node* root, Symbol* symbol_table);
+void gen_if_then_else(Node* root, Symbol* symbol_table);
 void gen_write(Node* root, Symbol* symbol_table);
 void gen_statement(Node* root, Symbol* symbol_table);
 void gen_assign(Node* root, Symbol* symbol_table);
-// void gen_for(Node* root, Symbol* symbol_table);
+void gen_for(Node* root, Symbol* symbol_table);
 int gen_expr(Node* root, Symbol* symbol_table);
 void gen_read(Node* root, Symbol* symbol_table);
 void gen_decl(Node* root, Symbol* symbol_table);
@@ -28,6 +29,7 @@ int get_temp_reg();
 int get_sub_reg();
 void reset_arg();
 int get_arg_reg();
+void reset_temp_regs();
 
 
 

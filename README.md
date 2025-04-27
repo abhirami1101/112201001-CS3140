@@ -7,6 +7,7 @@ Roll no : 112201001
 ### Code generation :
 
 	- to generate the assembly file for .sil programs:
+		- Navigate to the compiler folder
 		- Run `make`
 		- Run `bin/compiler a.sil` (give the path to a.sil)
 		- The `a.s` would be created in the `bin` folder.

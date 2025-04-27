@@ -33,3 +33,4 @@ run : $(OUTPUTFILE)
 
 clean :
 	rm -f $(OUTPUTFILE) $(PARSERHEADER) $(PARSERCFILE) $(FLEX)
+	rm -f bin/*.s

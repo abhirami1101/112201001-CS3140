@@ -63,11 +63,13 @@ Prog : Gdecl_sec stmt_list  {
     }
 
     //  printf("error flag === %d\n", error_flag);
-    evaluate_statement(root->left, symbol_table);
+    // evaluate_statement(root->left, symbol_table);
     //  printf("error flag === %d\n", error_flag);
     if (error_flag == 1){
         return 0;
     }
+    // printf("\n-------Symbol table--------\n");
+    // printsymboltable(symbol_table); 
     printf("\n---the syntax tree---\n");
     printroot(root, 0);
 }
@@ -78,11 +80,14 @@ Prog : Gdecl_sec stmt_list  {
     temp->extra = $3;  
     root = createnode(0, "program", 0, NULL, $1, NULL, NULL);
  
-    evaluate_statement(root->left, symbol_table);
+    // evaluate_statement(root->left, symbol_table);
     if (error_flag == 1){
         return 0;
     }
-       printroot(root, 0);
+    printf("\n-------Symbol table--------\n");
+    printsymboltable(symbol_table);
+     printf("\n---the syntax tree---\n");
+    printroot(root, 0);
 	}
 
 		;
@@ -217,11 +222,8 @@ assign_stmt: var_expr '=' expr {
     //    $1->left->var_pointer->value.int_arrayval[$1->right->value] = $3->value;  
     } 
     | var_expr ADD {
-        $$ = createnode('=', "assign", 0, NULL, $1, createnode(0,"number",1,NULL,NULL,NULL,NULL), NULL);
-    }
-    | array_expr ADD{
-        $$ = createnode('=', "assign_array", 0, NULL, $1, createnode(0,"number",1,NULL,NULL,NULL,NULL), NULL);
-    }
+        $$ = createnode('=', "assign", 0, NULL, $1, createnode(0,"add",0, NULL, createnode(0,"var_expr",0,NULL,$1,NULL,NULL),createnode(0,"number",1,NULL,NULL,NULL,NULL),NULL), NULL);
+    };
 
 
 write_stmt : WRITE '(' para_list ')' { 

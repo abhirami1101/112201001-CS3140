@@ -82,19 +82,7 @@ void reset_temp_regs(){
 	registers[25]=0;
 }
 
-// const char* get_temp_reg() {
-//     if (temp_reg_num >= MAX_TEMP_REGS) {
-//         fprintf(stderr, "Error: Out of temporary registers!\n");
-//         exit(1);
-//     }
-//     static char* reg_name;
-//     sprintf(reg_name, "$t%d", temp_reg_num++); 
-//     return strdup(reg_name);
-// }
 
-// void reset_temp_regs() {
-//     temp_reg_num = 0;
-// }
 
 char* generate_label() {
     static char label_buf[10];
@@ -130,6 +118,7 @@ void gen_mprologue(Node* root, Symbol* symbol_table){
 void gen_decl(Node* root, Symbol* symbol_table){
 	Symbol* var = symbol_table;
 	if (var != NULL){
+		// the initial variable
 		if (var->type == TYPE_INT){
 			fprintf(outfile, "\t.globl %s\n", var->varname);
 			fprintf(outfile, "\t.section	.bss,\"aw\",@nobits\n");
@@ -140,6 +129,7 @@ void gen_decl(Node* root, Symbol* symbol_table){
 			fprintf(outfile,"\t.space 4\n");
 		}
 		else if (var->type == TYPE_ARRAY_INT){
+
 			fprintf(outfile, "\t.globl %s\n", var->varname);
 			fprintf(outfile, "\t.section	.bss,\"aw\",@nobits\n");
 			fprintf(outfile, "\t.align 2\n");
@@ -152,6 +142,7 @@ void gen_decl(Node* root, Symbol* symbol_table){
 	}
 	while (var != NULL){
 		if (var->type == TYPE_INT){
+			
 			fprintf(outfile, "\t.globl %s\n", var->varname);
 			fprintf(outfile, "\t.align 2\n");
 			fprintf(outfile, "\t.type %s, @object\n", var->varname);
@@ -230,7 +221,7 @@ void gen_statement(Node* root, Symbol* symbol_table){
 void gen_statement_list(Node* root, Symbol* symbol_table){
 	Node* current_stmt = root;
 	while (current_stmt != NULL){
-		printf("%s --\n ", current_stmt->name);
+		// printf("%s --\n ", current_stmt->name);
 		gen_statement(current_stmt, symbol_table);
 		current_stmt = current_stmt->extra;
 	}
@@ -262,7 +253,7 @@ void gen_for(Node* root, Symbol* symbol_table){
         gen_assign(initial_assign, symbol_table);
         // reset_temp_regs(); 
     }
-
+	reset_temp_regs();
     fprintf(outfile, "\tb\t%s\n", condition_check_label);
     fprintf(outfile, "\t#nop\n"); 
 
@@ -273,16 +264,17 @@ void gen_for(Node* root, Symbol* symbol_table){
         gen_statement_list(loop_body_stmts, symbol_table);
         // reset_temp_regs();
     } 
-
+	reset_temp_regs();
     if (step_assign != NULL) {
         gen_assign(step_assign, symbol_table);
-        // reset_temp_regs();
+         reset_temp_regs();
     }
 
     fprintf(outfile, "%s:\n", condition_check_label);
     int cond_result = -1;
     if (condition_expr != NULL) {
         cond_result = gen_expr(condition_expr, symbol_table);
+		registers[cond_result] = 1;
     } 
 
     if (cond_result != -1) {
@@ -295,7 +287,7 @@ void gen_for(Node* root, Symbol* symbol_table){
     }
 	if (break_label)
 		fprintf(outfile,"%s:\n",break_label);
-    reset_regs();
+    reset_temp_regs();
 }
 // createnode(0,"if-then", 0, NULL,  createnode(0,"if", 0, NULL, $2,
 // 	createnode(0,"then", 0, NULL, $4,NULL,NULL),NULL), NULL, NULL); 
@@ -306,7 +298,7 @@ void gen_if_then(Node* root, Symbol* symbol_table){
 
 	int if_reg = gen_expr(condition->left,symbol_table); 
 	// contains value of the condition
-
+	registers[if_reg] = 1;
 	char* then_label = generate_label();
 	char* out_label = generate_label();
 
@@ -314,6 +306,7 @@ void gen_if_then(Node* root, Symbol* symbol_table){
 	fprintf(outfile, "%s:\n",then_label);
 	gen_statement_list(then->left,symbol_table);
 	fprintf(outfile, "%s:\n",out_label);
+	registers[if_reg] = 0;
 
 }
 
@@ -327,7 +320,7 @@ void gen_if_then_else(Node* root, Symbol* symbol_table){
 
 	int if_reg = gen_expr(condition->left,symbol_table); 
 	// contains value of the condition
-
+	registers[if_reg] = 1;
 	char* then_label = generate_label();
 	char* else_label = generate_label();
 	char* out_label = generate_label();
@@ -339,6 +332,7 @@ void gen_if_then_else(Node* root, Symbol* symbol_table){
 	fprintf(outfile, "%s:\n",else_label);
 	gen_statement_list(else_node->left,symbol_table);
 	fprintf(outfile, "%s:\n",out_label);
+	registers[if_reg] = 0;
 
 }
 
@@ -368,7 +362,7 @@ void gen_assign(Node* root, Symbol* symbol_table){
 		int index_reg;
 		int final_pos;
 		// if (strcmp(root->left->right->name,"number") != 0){
-			index_reg = gen_expr(root->left, symbol_table);
+			index_reg = gen_expr(root->left->right, symbol_table);
 			final_pos = get_sub_reg();
 			if (final_pos == -1){
 				final_pos = get_temp_reg();
@@ -376,16 +370,18 @@ void gen_assign(Node* root, Symbol* symbol_table){
 			fprintf(outfile, "\tsll\t$%d,$%d,2\t\n", final_pos,index_reg);
 			fprintf(outfile, "\taddu\t$%d,$%d,$%d\t\n", lhs,final_pos,lhs);
 			fprintf(outfile, "\tsw\t$%d, 0($%d)\t\n", rhs, lhs);
-			registers[index_reg]= 0;
+			// registers[index_reg]= 0;
+			
 		// }
 		// else{
 		// fprintf(outfile, "\tsw\t$%d, %d($%d)\t\n", rhs,4*(root->left->right->value), lhs);}
 		fprintf(outfile,"\t#nop\n");
 	}
+	reset_regs();
 }
 
 int gen_expr(Node* root, Symbol* symbol_table){
-	printf("to generate expression : %s\n",root->name);
+	// printf("to generate expression : %s\n",root->name);
 	int result_reg;
 	if (strcmp(root->name,"number")== 0){
 		result_reg = get_sub_reg();
@@ -438,6 +434,8 @@ int gen_expr(Node* root, Symbol* symbol_table){
 		fprintf(outfile, "\tlw\t$%d, %d($%d)\n", result_reg,0, addr_reg);
 		registers[addr_reg] = 0;
 		fprintf(outfile,"\t#nop\n");
+		registers[final_pos] = 0;
+		registers[index_reg] = 0;
 		return result_reg;
 	}
 	if (strcmp(root->name,"add")== 0){
@@ -524,6 +522,7 @@ int gen_expr(Node* root, Symbol* symbol_table){
 		fprintf(outfile,"$%s:\n",lc);
 		fprintf(outfile,"\tmove\t$%d,$0\n",result_reg);
 		fprintf(outfile,"$%s:\n",nextlc);
+		// registers[result1] = 0;
 		return result_reg;
 		// if (result_reg == -1){
 		// 	result_reg = get_temp_reg();
@@ -670,7 +669,7 @@ void gen_read(Node* root, Symbol* symbol_table){
     tempo[0] = '\0';
 
     while (var) {
-		printf(" to read %s\n", var->name);
+		// printf(" to read %s\n", var->name);
         char line[128];
 		int arg_reg = get_arg_reg();
 		registers[arg_reg] = 1;
@@ -726,19 +725,20 @@ void gen_write(Node* root, Symbol* symbol_table){
     tempo[0] = '\0';
 
     while (var) {
-		printf("to write var name %s\n", var->left->name);
+		// printf("to write var name %s\n", var->left->name);
         char line[128];
 		int result_reg = gen_expr(var->left,symbol_table);
 		int arg_reg = get_arg_reg();
 		registers[arg_reg] = 1;
         snprintf(line, sizeof(line),
                  "\tmove\t$%d,$%d\n", arg_reg, result_reg);
-		registers[result_reg] = 0;
+		// registers[result_reg] = 0;
         strncat(tempo, line, sizeof(tempo) - strlen(tempo) - 1);
         var = var->extra;
     }
     strncat(tempo, label_load, sizeof(tempo) - strlen(tempo) - 1);
 	reset_arg();
+	reset_temp_regs();
     fprintf(outfile, "%s", tempo);
     fprintf(outfile, "\tjal\tprintf\n");
 	fprintf(outfile, "\t#nop\n");
@@ -823,29 +823,59 @@ void gen_epilogue(){
 }
 
 void genMIPS (const char* filename,Node* root, Symbol* symbol_table){
-	printf("reached MIPS geneartion filename\n");
+	printf("reached MIPS generation %s\n",filename);
 	file_name = strdup(filename);
-	const char *dot_position = strrchr(filename, '.');
-	size_t base_len = dot_position - filename;
-	size_t new_len = base_len + 2 + 1;
-	char *s_filename = (char *)malloc(new_len);
-	strncpy(s_filename, filename, base_len);
-	strcpy(s_filename + base_len, ".s");
-	outfile = fopen(s_filename, "w");
-	gen_prologue(root, symbol_table);
-	gen_decl(root, symbol_table);
-	printf("declaration done\n");
+	const char *last_slash = strrchr(filename, '/');
+	const char *base_start = (last_slash == NULL) ? filename : last_slash + 1;
+	// const char *dot_position = strrchr(filename, '.');
+	const char *last_dot = strrchr(base_start, '.');
+	// size_t base_len = dot_position - filename;
+	// size_t new_len = base_len + 2 + 1;
+		size_t base_name_len;
+	if (last_dot == NULL || last_dot == base_start) {
+		base_name_len = strlen(base_start);
+	} else {
+		base_name_len = last_dot - base_start;
+	}
+	const char* output_dir = "bin/";
+    const char* output_ext = ".s";
+	// char *s_filename = (char *)malloc(new_len);
+	// strncpy(s_filename, filename, base_len);
+	// strcpy(s_filename + base_len, ".s");
+	size_t full_path_len = strlen(output_dir) + base_name_len + strlen(output_ext) + 1;
+	char *full_output_path = (char *)malloc(full_path_len);
+    if (full_output_path == NULL) {
+         perror("unable to allocate memory for output path");
+         return;
+    }
+	strcpy(full_output_path, output_dir);
+	strncat(full_output_path, base_start, base_name_len);
+	strcat(full_output_path, output_ext);   
+	outfile = fopen(full_output_path, "w");
+	if (outfile == NULL) {
+		 fprintf(stderr, "Error: unable to open output file '%s' for writing: ", full_output_path);
+         perror(NULL);
+		 free(full_output_path);
+		 return;
+	}
+	printf("Assembly file created at %s\n", full_output_path);
+	free(full_output_path);
+	// outfile = fopen(s_filename, "w");
+	gen_prologue(root, symbol_table); // to write the prologue..(and starts with the .text section)
+	gen_decl(root, symbol_table); // to genrate the text section
+	// printf("declaration done\n");
 	// check_state(root, symbol_table);
-	fprintf(outfile, "	.rdata\n");
+	fprintf(outfile, "	.rdata\n"); // data section starts
 	// fprintf(outfile,"	.align 2\n");
 	generate_data_section_entries(root, symbol_table);
-	printf("data section done\n");
-	fprintf(outfile,"\t.text\n");
-	gen_main(root, symbol_table);
-	printf("Main done\n");
+	// printf("data section done\n");
+	fprintf(outfile,"\t.text\n"); // marks the end of data section
+	gen_main(root, symbol_table); //  main..(prologue -- stack and fp setting up)
+	// printf("Main done\n");
 	if (root->left != NULL)
 		gen_statement_list(root->left, symbol_table);
-	gen_epilogue();
+	gen_epilogue(); // epilogue of main, and the program
+
 	fclose(outfile);
 }
 

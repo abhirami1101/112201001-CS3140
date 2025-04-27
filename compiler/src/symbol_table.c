@@ -85,15 +85,26 @@ void assign(Symbol* var, int index,  int value){
 void printsymboltable(Symbol* table){
     if (table != NULL){
 
-        if (table->is_function == 0 && table->size == 0)
-            printf("%s = %d\n", table->varname, table->value.intval);
-        else{
-            printf("%s = [", table->varname);
-            for (int i = 0; i < table->size; i++){
-                printf("%d, ",table->value.int_arrayval[i]);
-            }
-            printf("]\n");
+        // if (table->is_function == 0 && table->size == 0)
+        //     printf("%s = %d\n", table->varname, table->value.intval);
+        // else{
+        //     printf("%s = [", table->varname);
+        //     for (int i = 0; i < table->size; i++){
+        //         printf("%d, ",table->value.int_arrayval[i]);
+        //     }
+        //     printf("]\n");
+        // }
+        char* type;
+        if (table->type == TYPE_INT){
+            type = "integer";
         }
+        if (table->type == TYPE_ARRAY_INT){
+            type = "integer-array";
+        }
+        if (table->type == TYPE_BOOL){
+            type = "boolean";
+        }
+        printf("Variable Name : %s\n \t--> Type : %s\n \t--> Size : %d\n", table->varname, type, table->size);
         printsymboltable(table->next);
     }
     else{

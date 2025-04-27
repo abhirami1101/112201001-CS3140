@@ -630,6 +630,7 @@ int gen_expr(Node* root, Symbol* symbol_table){
 		registers[result1] = 0;
 		return result2;
 	}
+	return 0;
 }
 // void gen_read(Node* root, Symbol* symbol_table){
 // 	int label_no = root->value;
